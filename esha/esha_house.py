@@ -46,7 +46,8 @@ class ESHAHouse:
     ceiling_height: float
 
 #----------house_builders----------#
-def generate_house_structure(room_spec, scene_config, unit_size = 2.5):
+def generate_house_structure(scene_config, unit_size = 2.5):
+    room_spec = scene_config.room_spec
     dims = scene_config.dims
 
     generate_dims = None
