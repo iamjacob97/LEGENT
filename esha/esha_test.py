@@ -1,16 +1,7 @@
-from esha.esha_generator import ESHAGenerator, SceneConfig
-from legent import Environment, ResetInfo
+from esha.esha_controller import ESHAController
 
-generator = ESHAGenerator()
 
-env = Environment(env_path="auto")
+controller = ESHAController()
 
-try:
-    scene = generator.generate()
-    env.reset(ResetInfo(scene=scene))
-    while True:
-        env.step()
-finally:
-    env.close()
-
+controller.start()
 

@@ -75,8 +75,7 @@ def generate_house_structure(scene_config, unit_size = 2.5):
     
 def generate_interior(room_spec, dims: Optional[Tuple[int, int]] = None) -> np.array:
     if dims is None:
-            x_size = np.random.randint(low=2, high=4)
-            z_size = np.random.randint(low=2, high=4)
+            x_size, z_size = np.random.randint(low=3, high=4, size=2)
     else:
         x_size, z_size = dims
 

@@ -21,9 +21,11 @@ RoomType = str  # "Bedroom" | "LivingRoom" | "Kitchen" | "Bathroom"
 class SceneConfig:
     room_spec: ESHARoomSpec = ESHARoomSpec(room_spec_id="ESHA-SingleRoom", spec=ESHARoom(room_id=3, room_type="LivingRoom"))
     dims: Tuple[int, int] = None # (x_size, z_size) in cell units
+    unit_size: float = 2.5
     include_other_items: bool = True  # include LEGENT proc objects in addition to specified items
     items: Optional[Dict[str, int]] = None  # user-specified dictionary; keys are LEGENT types (e.g., "orange", "table")
     player_agent_prefabs: Optional[Dict[str, str]] = None # {player_prefab: prefab, agent_prefab: prefab}
+    subject: Optional[Dict[str, int]] = None # {subject_prefab: prefab}
 
 DEFAULT_FLOOR_SIZE = 2.5
 DEFAULT_WALL_PREFAB = "LowPolyInterior2_Wall1_C1_01"
@@ -35,14 +37,13 @@ class ESHAGenerator(HouseGenerator):
         self, 
         scene_config: SceneConfig = SceneConfig(),
         odb: ObjectDB = get_default_object_db(), 
-        unit_size=2.5,
     ) -> None:
         self.scene_config = scene_config
         self.odb = odb
         self.rooms: Dict[str, Room] = dict()
-        self.unit_size = unit_size
-        self.half_unit_size = unit_size / 2  # Half of the size of a unit in the grid
-        self.scale_ratio = unit_size / DEFAULT_FLOOR_SIZE
+        self.unit_size = scene_config.unit_size
+        self.half_unit_size = scene_config.unit_size / 2  # Half of the size of a unit in the grid
+        self.scale_ratio = scene_config.unit_size / DEFAULT_FLOOR_SIZE
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}("
@@ -51,7 +52,6 @@ class ESHAGenerator(HouseGenerator):
                 f"rooms={len(self.rooms)}, "
                 f"unit_size={self.unit_size}, "
                 f"scale_ratio={self.scale_ratio:.2f})") 
-    
     
 
     def generate_structure(self) -> ESHAHouse:

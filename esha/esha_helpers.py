@@ -6,6 +6,7 @@ from legent.scene_generation.objects import ObjectDB, get_default_object_db
 def log(*args, **kwargs):
     pass
 
+#------------Scene Parsing------------#
 def split_items_into_receptacles_and_objects(
         odb: ObjectDB = get_default_object_db(), 
         items: Optional[Dict[str, int]] = None
@@ -43,6 +44,3 @@ def split_items_into_receptacles_and_objects(
             continue
 
     return receptacle_object_counts, object_counts
-    
-
-#------------Scene Parsing------------#
