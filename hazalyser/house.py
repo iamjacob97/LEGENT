@@ -1,12 +1,12 @@
 from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple, Literal, Callable
-from attrs import define, field
+from attrs import define
 import numpy as np
 
 from legent.scene_generation.constants import OUTDOOR_ROOM_ID
 
 
-class ESHARoom:
+class Room:
     def __init__(
         self,
         room_id: int,
@@ -20,15 +20,15 @@ class ESHARoom:
         self.room_type = room_type
 
     def __repr__(self):
-        return f"ESHARoom(room_id={self.room_id}, room_type={self.room_type})"
+        return f"Room(room_id={self.room_id}, room_type={self.room_type})"
 
     def __str__(self):
         return self.__repr__()
 
 @define
-class ESHARoomSpec:
+class RoomSpec:
     room_spec_id: str
-    spec: ESHARoom
+    spec: Room
 
     dims: Optional[Callable[[], Tuple[int, int]]] = None
     """The (x_size, z_size) dimensions of the house.
@@ -37,7 +37,7 @@ class ESHARoomSpec:
     """
      
 @define
-class ESHAHouse:
+class House:
     interior: np.ndarray
     floorplan: np.ndarray
     connectors: Dict[Tuple[int, int], List[Tuple[Tuple[int, int], Tuple[int, int]]]]
@@ -64,7 +64,7 @@ def generate_house_structure(scene_config, unit_size = 2.5):
     xz_poly_map = get_xz_poly_map(boundary, room_spec.spec.room_id)
 
     ceiling_height = 0
-    return ESHAHouse(
+    return House(
         interior=interior,
         floorplan=floorplan,
         connectors=connectors,

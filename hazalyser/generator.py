@@ -5,8 +5,8 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Any, Union, Literal, Callable, Set
 
-from esha.esha_helpers import log
-from esha.esha_house import ESHARoom, ESHARoomSpec, ESHAHouse, generate_house_structure
+from hazalyser.helpers import log
+from hazalyser.house import ESHARoom, ESHARoomSpec, ESHAHouse, generate_house_structure
 from legent.scene_generation.types import Vector3
 from legent.scene_generation.room import Room
 from legent.scene_generation.generator import HouseGenerator
@@ -19,7 +19,9 @@ RoomType = str  # "Bedroom" | "LivingRoom" | "Kitchen" | "Bathroom"
 
 @dataclass
 class SceneConfig:
-    room_spec: ESHARoomSpec = ESHARoomSpec(room_spec_id="ESHA-SingleRoom", spec=ESHARoom(room_id=3, room_type="LivingRoom"))
+    room_spec: ESHARoomSpec = ESHARoomSpec(room_spec_id="ESHA-SingleRoom", 
+                                           spec=ESHARoom(room_id=3, 
+                                                        room_type=random.choice(["Bedroom", "LivingRoom", "Kitchen", "Bathroom"])))
     dims: Tuple[int, int] = None # (x_size, z_size) in cell units
     unit_size: float = 2.5
     include_other_items: bool = True  # include LEGENT proc objects in addition to specified items
@@ -32,7 +34,7 @@ DEFAULT_WALL_PREFAB = "LowPolyInterior2_Wall1_C1_01"
 MAX_PLACEMENT_ATTEMPTS = 17
 WALL_THICKNESS = 0.075
 
-class ESHAGenerator(HouseGenerator):
+class SceneGenerator(HouseGenerator):
     def __init__(
         self, 
         scene_config: SceneConfig = SceneConfig(),
