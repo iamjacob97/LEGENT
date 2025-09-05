@@ -8,13 +8,10 @@ from .controller import Controller
 from .generator import SceneConfig, SceneGenerator
 
 # House Generation
-from .house import Room, RoomSpec, House, generate_house_structure
+from .house import HazardRoom, HazardRoomSpec, HazardHouse, generate_house_structure
 
 # Analysis and Safety Tools
 from .prompter import Prompter, run_llm_analysis, HazardEntry, Result
-
-# Utility Functions
-from .helpers import split_items_into_receptacles_and_objects
 
 # Object Database
 from .objects import ObjectDB, get_default_object_db
@@ -26,9 +23,9 @@ __all__ = [
     
     # Configuration and Specification
     "SceneConfig",         # Configuration for scene generation (dimensions, items, etc.)
-    "Room",               # Individual room representation
-    "RoomSpec",           # Room specification for scene generation
-    "House",              # House structure representation
+    "HazardRoom",               # Individual room representation
+    "HazardRoomSpec",           # Room specification for scene generation
+    "HazardHouse",              # House structure representation
     
     # Analysis Tools
     "Prompter",           # Safety and accessibility analysis
@@ -37,7 +34,6 @@ __all__ = [
     "Result",             # Analysis result container
     
     # Utility Functions
-    "split_items_into_receptacles_and_objects",  # Item categorization helper
     "generate_house_structure",                  # House structure generation
     
     # Object Database

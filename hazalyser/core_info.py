@@ -1,13 +1,51 @@
 from legent import Environment
+from legent.action.action import ResetInfo
 from legent.scene_generation.objects import get_default_object_db
+from legent.scene_generation.generator import HouseGenerator
 
 odb = get_default_object_db()
 
 path_to_executable = "auto" # ".legent/env/client/LEGENT-<platform>-<version>" for example
 env = Environment(env_path=path_to_executable, use_animation=False) # or env_path="auto" to start the latest client in .legent/env/client.
 try:
-    env.reset()
-    obs = env.step()
-    print(obs.game_states["option_mode_info"])
+    
+    scene = {
+        "instances": [
+            {
+                "prefab": "LowPolyInterior2_Bin",
+                "position": [0,0.1,2],
+                "rotation": [0, 90, 0],
+                "scale": [1, 1, 1],
+                "type": "interactable"
+            },
+            {
+                "prefab": "LowPolyInterior_Potato",
+                "position": [0,0.1,0],
+                "rotation": [0, 0, 0],
+                "scale": [1, 1, 1],
+                "type": "interactable"
+            },
+            {
+                "prefab": "LowPolyInterior_Floor_01",
+                "position": [0, 0, 0],
+                "rotation": [0, 0, 0],
+                "scale": [4, 1, 4],
+                "type": "kinematic"
+            },
+            
+        ],
+        "player": {
+            "position": [0,0.1,1],
+            "rotation": [0, 180, 0]
+        },
+        "agent": {
+            "position": [0,0.1,-1],
+            "rotation": [0, 0, 0]
+        },
+        "center": [0, 10, 0],
+        "prompt": ""
+    }
+    obs = env.reset(ResetInfo(scene=scene))
+    print(obs.game_states["instances"])
 finally:
     env.close()

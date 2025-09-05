@@ -1,13 +1,12 @@
 import json
 import os
+import pandas as pd
 from collections import defaultdict
 from typing import Any, Dict, List, Tuple
 from legent.environment.env_utils import get_default_env_data_path
 
-
 class ObjectDB:
     def __init__(self, PLACEMENT_ANNOTATIONS, OBJECT_DICT: Dict[str, List[str]], MY_OBJECTS: Dict[str, List[str]], OBJECT_TO_TYPE: Dict[str, str], PREFABS: Dict[str, Any], RECEPTACLES: Dict[str, Any], KINETIC_AND_INTERACTABLE_INFO: Dict[str, Any], ASSET_GROUPS: Dict[str, Any], FLOOR_ASSET_DICT: Dict, PRIORITY_ASSET_TYPES: Dict[str, List[str]]):
-        import pandas as pd
         self.PLACEMENT_ANNOTATIONS: pd.DataFrame = PLACEMENT_ANNOTATIONS
         self.OBJECT_DICT: Dict[str, List[str]] = OBJECT_DICT
         self.MY_OBJECTS: Dict[str, List[str]] = MY_OBJECTS

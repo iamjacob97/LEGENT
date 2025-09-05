@@ -3,10 +3,9 @@ from typing import Dict, List, Optional, Set, Tuple, Literal, Callable
 from attrs import define
 import numpy as np
 
-from legent.scene_generation.constants import OUTDOOR_ROOM_ID
+OUTDOOR_ROOM_ID = 1
 
-
-class Room:
+class HazardRoom:
     def __init__(
         self,
         room_id: int,
@@ -26,9 +25,9 @@ class Room:
         return self.__repr__()
 
 @define
-class RoomSpec:
+class HazardRoomSpec:
     room_spec_id: str
-    spec: Room
+    spec: HazardRoom
 
     dims: Optional[Callable[[], Tuple[int, int]]] = None
     """The (x_size, z_size) dimensions of the house.
@@ -37,7 +36,7 @@ class RoomSpec:
     """
      
 @define
-class House:
+class HazardHouse:
     interior: np.ndarray
     floorplan: np.ndarray
     connectors: Dict[Tuple[int, int], List[Tuple[Tuple[int, int], Tuple[int, int]]]]
@@ -64,7 +63,7 @@ def generate_house_structure(scene_config, unit_size = 2.5):
     xz_poly_map = get_xz_poly_map(boundary, room_spec.spec.room_id)
 
     ceiling_height = 0
-    return House(
+    return HazardHouse(
         interior=interior,
         floorplan=floorplan,
         connectors=connectors,
@@ -75,7 +74,7 @@ def generate_house_structure(scene_config, unit_size = 2.5):
     
 def generate_interior(room_spec, dims: Optional[Tuple[int, int]] = None) -> np.array:
     if dims is None:
-            x_size, z_size = np.random.randint(low=3, high=4, size=2)
+            x_size, z_size = np.random.randint(low=3, high=5, size=2)
     else:
         x_size, z_size = dims
 

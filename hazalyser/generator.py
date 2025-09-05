@@ -5,47 +5,44 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Any, Union, Literal, Callable, Set
 
-from hazalyser.helpers import log
-from hazalyser.house import ESHARoom, ESHARoomSpec, ESHAHouse, generate_house_structure
-from legent.scene_generation.types import Vector3
+from hazalyser.utils import log
+from legent.utils.math import look_rotation
+from hazalyser.house import HazardRoom, HazardRoomSpec, HazardHouse, generate_house_structure
 from legent.scene_generation.room import Room
+from hazalyser.objects import ObjectDB, get_default_object_db
+from hazalyser.smallObjects import add_small_objects
+from legent.scene_generation.types import Vector3
 from legent.scene_generation.generator import HouseGenerator
 from legent.server.rect_placer import RectPlacer
-from legent.scene_generation.objects import ObjectDB, get_default_object_db
 from legent.scene_generation.asset_groups import Asset
-from legent.scene_generation.small_objects import add_small_objects
 
 RoomType = str  # "Bedroom" | "LivingRoom" | "Kitchen" | "Bathroom"
 
 @dataclass
 class SceneConfig:
-    room_spec: ESHARoomSpec = ESHARoomSpec(room_spec_id="ESHA-SingleRoom", 
-                                           spec=ESHARoom(room_id=3, 
+    room_spec: HazardRoomSpec = HazardRoomSpec(room_spec_id="ESHA-SingleRoom", 
+                                           spec=HazardRoom(room_id=3, 
                                                         room_type=random.choice(["Bedroom", "LivingRoom", "Kitchen", "Bathroom"])))
     dims: Tuple[int, int] = None # (x_size, z_size) in cell units
-    unit_size: float = 2.5
+    subject: Optional[Dict[str, int]] = None # {subject_prefab: prefab}
+    agent_prefab: Optional[str] = ""
     include_other_items: bool = True  # include LEGENT proc objects in addition to specified items
     items: Optional[Dict[str, int]] = None  # user-specified dictionary; keys are LEGENT types (e.g., "orange", "table")
-    player_agent_prefabs: Optional[Dict[str, str]] = None # {player_prefab: prefab, agent_prefab: prefab}
-    subject: Optional[Dict[str, int]] = None # {subject_prefab: prefab}
 
+DEFAULT_UNIT_SIZE = 2.5
 DEFAULT_FLOOR_SIZE = 2.5
 DEFAULT_WALL_PREFAB = "LowPolyInterior2_Wall1_C1_01"
 MAX_PLACEMENT_ATTEMPTS = 17
 WALL_THICKNESS = 0.075
 
 class SceneGenerator(HouseGenerator):
-    def __init__(
-        self, 
-        scene_config: SceneConfig = SceneConfig(),
-        odb: ObjectDB = get_default_object_db(), 
-    ) -> None:
+    def __init__(self, scene_config: SceneConfig = SceneConfig(), odb: ObjectDB = get_default_object_db()):
         self.scene_config = scene_config
         self.odb = odb
-        self.rooms: Dict[str, Room] = dict()
-        self.unit_size = scene_config.unit_size
-        self.half_unit_size = scene_config.unit_size / 2  # Half of the size of a unit in the grid
-        self.scale_ratio = scene_config.unit_size / DEFAULT_FLOOR_SIZE
+        self.rooms: Dict[str, HazardRoom] = dict()
+        self.unit_size = DEFAULT_UNIT_SIZE
+        self.half_unit_size = DEFAULT_UNIT_SIZE / 2  # Half of the size of a unit in the grid
+        self.scale_ratio = DEFAULT_UNIT_SIZE / DEFAULT_FLOOR_SIZE
 
     def __repr__(self) -> str:
         return (f"{self.__class__.__name__}("
@@ -54,9 +51,8 @@ class SceneGenerator(HouseGenerator):
                 f"rooms={len(self.rooms)}, "
                 f"unit_size={self.unit_size}, "
                 f"scale_ratio={self.scale_ratio:.2f})") 
-    
 
-    def generate_structure(self) -> ESHAHouse:
+    def generate_structure(self) -> HazardHouse:
         house_structure = generate_house_structure(scene_config=self.scene_config)
         return house_structure
     
@@ -237,160 +233,53 @@ class SceneGenerator(HouseGenerator):
                         
         return floor_instances, floors
 
-    def get_rooms(self, room_spec: ESHARoomSpec, floor_polygons):
+    def get_rooms(self, room_spec: HazardRoomSpec, floor_polygons):
         room_id = room_spec.spec.room_id
         room_type = room_spec.spec.room_type
         polygon = floor_polygons[f"room|{room_id}"]
-        room = Room(
-            polygon=polygon,
-            room_type=room_type,
-            room_id=room_id,
-            odb=self.odb,
-        )
+        room = Room(polygon=polygon, room_type=room_type, room_id=room_id, odb=self.odb)
         self.rooms[room_id] = room
 
-    def generate(
-        self,
-        object_counts: Dict[str, int] = {},
-        receptacle_object_counts: Dict[str, Dict[str, int]] = {}
-    ):
+    def split_items_into_receptacles_and_objects(self):
+        """
+        Split user items into receptacles (floor assets) and small objects.
+        - For receptacles: build { type: {"count": n, "objects": [] } }
+        - For small objects: map type/prefab to concrete prefab counts
+        """
+        items = self.scene_config.items
         odb = self.odb
-        prefabs = odb.PREFABS
-        room_spec = self.scene_config.room_spec
-        scene_config = self.scene_config
 
-        # 1. Generate house structure
-        house_structure = self.generate_structure()
-        interior = house_structure.interior
-        x_size = interior.shape[0]
-        z_size = interior.shape[1]
+        if not items:
+            return {}, {}
 
-        min_x, min_z, max_x, max_z = (
-            0,
-            0,
-            x_size * self.unit_size,
-            z_size * self.unit_size,
-        )
-        self.placer = RectPlacer((min_x, min_z, max_x, max_z))
-        
-        # 2. Add floors and walls
-        floor_instances, floors = self.add_floors_and_walls(house_structure, room_spec, odb, prefabs)
-        # add light
-        # light_prefab = "LowPolyInterior2_Light_04"
-        # light_y_size = prefabs[light_prefab]["size"]["y"]
-        # floor_instances.append(
-        #     {
-        #         "prefab": "LowPolyInterior2_Light_04",
-        #         "position": [max_x / 2, 3 - light_y_size / 2, max_z / 2],
-        #         "rotation": [0, 0, 0],
-        #         "scale": [1, 1, 1],
-        #         "type": "kinematic",
-        #     }
-        # )
-        
-        # 3. Room Initialization
-        floor_polygons = self.get_floor_polygons(house_structure.xz_poly_map)
-        self.get_rooms(room_spec=room_spec, floor_polygons=floor_polygons)
+        receptacle_object_counts: Dict[str, Any] = {}
+        small_object_counts: Dict[str, int] = {}
 
-        # 4. Add human and agent
-        player, agent = self.add_human_and_agent(floors)
-        if scene_config.player_agent_prefabs:
-            for prefab_type, prefab in scene_config.player_agent_prefabs.items():
-                if prefab_type == "player":
-                    player["prefab"] = prefab
-                elif prefab_type == "agent":
-                    agent["prefab"] = prefab
+        # Receptacle types are keys in odb.RECEPTACLES; small object types are keys in odb.OBJECT_DICT
+        for name, cnt in items.items():
+            key = name.strip()
+            type_key = key.lower()
 
-        # player = {
-        #     "prefab": "",
-        #     "position": [10, 0.05, 10],
-        #     "rotation": [0, np.random.uniform(0, 360), 0],
-        #     "scale": [1, 1, 1],
-        #     "parent": -1,
-        #     "type": "",
-        # }
-        # if room_num == 1:
-        #     flag, success_agent = self.add_corner_agent(max_x, max_z)
-        #     if flag:
-        #         agent = success_agent
-        
+            receptacles = set(odb.RECEPTACLES.keys())
+            small_objects = set(odb.OBJECT_DICT.keys()) - receptacles
 
-        # ESHA specific object placement logic
-        # 5. Place specified objects
-        specified_object_types = set()
-        specified_object_instances = []
-        if receptacle_object_counts:
-            specified_object_types, specified_object_instances = self.place_specified_objects(receptacle_object_counts)
-        
-        # 6. prepare room assets
-        object_instances = []
-        if self.scene_config.include_other_items:
-            max_floor_objects = 10
-            self.add_other_objects(max_floor_objects=max_floor_objects)
+            if type_key in receptacles:
+                receptacle_object_counts[type_key] = {"count": int(cnt), "objects": []}
+                continue
 
-            # 7. place other objects
-            object_instances = self.place_other_objects(specified_object_types)
+            # Treat as small object type or prefab
+            if type_key in small_objects:
+                # Choose random prefab per instance
+                for _ in range(int(cnt)):
+                    prefab = random.choice(odb.OBJECT_DICT[type_key])
+                    small_object_counts[prefab] = small_object_counts.get(prefab, 0) + 1
+            elif key in odb.PREFABS:
+                small_object_counts[key] = small_object_counts.get(key, 0) + int(cnt)
+            else:
+                # Unknown key; ignore silently to stay robust
+                continue
 
-        # 8. add small objects
-        max_object_types_per_room = 10
-        small_object_instances = []
-        small_object_instances = add_small_objects(
-            object_instances,
-            odb,
-            self.rooms,
-            max_object_types_per_room,
-            (min_x, min_z, max_x, max_z),
-            object_counts=object_counts,
-            specified_object_instances=specified_object_instances,
-            receptacle_object_counts=receptacle_object_counts
-        )
-
-        # 9. Prepare scene
-        instances = (
-            floor_instances
-            + object_instances
-            + specified_object_instances
-            + small_object_instances
-        )
-
-        DEBUG = False
-        if DEBUG:
-            for inst in instances:
-                inst["type"] = "kinematic"
-
-        height = max(12, (max_z - min_z) * 1 + 2)
-        log(f"min_x: {min_x}, max_x: {max_x}, min_z: {min_z}, max_z: {max_z}")
-        center = [(min_x + max_x) / 2, height, (min_z + max_z) / 2]
-
-        room_polygon = []
-        for room in self.rooms.values():
-            id = room.room_id
-            polygon = list(room.room_polygon.polygon.exterior.coords)
-            x_center = sum([x for x, _ in polygon]) / len(polygon)
-            z_center = sum([z for _, z in polygon]) / len(polygon)
-            x_size = max([x for x, _ in polygon]) - min([x for x, _ in polygon])
-            z_size = max([z for _, z in polygon]) - min([z for _, z in polygon])
-            room_polygon.append({
-                'room_id':id,
-                'room_type': room.room_type,
-                'position': [x_center, 1.5, z_center],
-                'size': [x_size,3, z_size],
-                'polygon':polygon
-            })
-            # print(f'room {id} polygon: {polygon}')
-
-        infos = {
-            "prompt": "",
-            "instances": instances,
-            "player": player,
-            "agent": agent,
-            "center": center,
-            "room_polygon": room_polygon,
-        }
-        with open("last_scene.json", "w", encoding="utf-8") as f:
-            json.dump(infos, f, ensure_ascii=False, indent=4)
-        return infos
-
+        return receptacle_object_counts, small_object_counts
 
     def place_specified_objects(self, receptacle_object_counts):
         """place requested furniture randomly in single room"""
@@ -721,8 +610,206 @@ class SceneGenerator(HouseGenerator):
 
         return object_instances
 
+    def add_human_and_agent(self, floors):
+        def get_bbox_of_floor(x, z):
+            x, z = (x - 0.5) * self.unit_size, (z - 0.5) * self.unit_size
+            return (
+                x - self.half_unit_size,
+                z - self.half_unit_size,
+                x + self.half_unit_size,
+                z + self.half_unit_size,
+            )
+
+        def random_xz_for_agent(
+            eps, floors
+        ):  # To prevent being positioned in the wall and getting pushed out by collision detection.
+            # ravel the floor
+            ravel_floors = floors.ravel()
+            # get the index of the floor
+            floor_idx = np.where(ravel_floors != 0)[0]
+            # sample from the floor index
+            floor_idx = np.random.choice(floor_idx)
+            # get the x and z index
+            x, z = np.unravel_index(floor_idx, floors.shape)
+            log(f"human/agent x: {x}, z: {z}")
+
+            # get the bbox of the floor
+            bbox = get_bbox_of_floor(x, z)
+            # uniformly sample from the bbox, with eps
+            x, z = np.random.uniform(bbox[0] + eps, bbox[2] - eps), np.random.uniform(
+                bbox[1] + eps, bbox[3] - eps
+            )
+            return x, z
+
+        ### STEP 3: Randomly place the player and playmate (AI agent)
+        # place the player
+        AGENT_HUMAN_SIZE = 1
+        while True:
+            x, z = random_xz_for_agent(eps=0.5, floors=floors)
+            player = {
+                "prefab": "",
+                "position": [x, 0.05, z],
+                "rotation": [0, np.random.uniform(0, 360), 0],
+                "scale": [1, 1, 1],
+                "parent": -1,
+                "type": "",
+            }
+            ok = self.placer.place("playmate", x, z, AGENT_HUMAN_SIZE, AGENT_HUMAN_SIZE)
+
+            if ok:
+                log(f"player x: {x}, z: {z}")
+                break
+        # place the playmate
+        while True:
+            x, z = random_xz_for_agent(eps=0.5, floors=floors)
+            playmate = {
+                "prefab": "",
+                "position": [x, 0.05, z],
+                "rotation": [0, np.random.uniform(0, 360), 0],
+                "scale": [1, 1, 1],
+                "parent": -1,
+                "type": "",
+            }
+            ok = self.placer.place("playmate", x, z, AGENT_HUMAN_SIZE, AGENT_HUMAN_SIZE)
+            if ok:
+                log(f"playmate x: {x}, z: {z}")
+                break
+
+        # player lookat the playmate
+        vs, vt = np.array(player["position"]), np.array(playmate["position"])
+        vr = look_rotation(vt - vs)
+        player["rotation"] = [0, vr[1], 0]
+
+        return player, playmate
+
+    def generate(self):
+        odb = self.odb
+        prefabs = odb.PREFABS
+        room_spec = self.scene_config.room_spec
+
+        # 1. Generate house structure
+        house_structure = self.generate_structure()
+        interior = house_structure.interior
+        x_size = interior.shape[0]
+        z_size = interior.shape[1]
+
+        min_x, min_z, max_x, max_z = (0, 0, x_size * self.unit_size, z_size * self.unit_size)
+        self.placer = RectPlacer((min_x, min_z, max_x, max_z))
+        
+        # 2. Add floors and walls
+        floor_instances, floors = self.add_floors_and_walls(house_structure, room_spec, odb, prefabs)
+        # add light
+        # light_prefab = "LowPolyInterior2_Light_04"
+        # light_y_size = prefabs[light_prefab]["size"]["y"]
+        # floor_instances.append(
+        #     {
+        #         "prefab": "LowPolyInterior2_Light_04",
+        #         "position": [max_x / 2, 3 - light_y_size / 2, max_z / 2],
+        #         "rotation": [0, 0, 0],
+        #         "scale": [1, 1, 1],
+        #         "type": "kinematic",
+        #     }
+        # )
+        
+        # 3. Room Initialization
+        floor_polygons = self.get_floor_polygons(house_structure.xz_poly_map)
+        self.get_rooms(room_spec=room_spec, floor_polygons=floor_polygons)
+
+        # 4. Add human and agent
+        player, agent = self.add_human_and_agent(floors)
+        if self.scene_config.agent_prefab:
+            agent["prefab"] = self.scene_config.agent_prefab
+
+        # player = {
+        #     "prefab": "",
+        #     "position": [10, 0.05, 10],
+        #     "rotation": [0, np.random.uniform(0, 360), 0],
+        #     "scale": [1, 1, 1],
+        #     "parent": -1,
+        #     "type": "",
+        # }
+        # if room_num == 1:
+        #     flag, success_agent = self.add_corner_agent(max_x, max_z)
+        #     if flag:
+        #         agent = success_agent
+        
+
+        # user specified object placement logic
+        # 5. Place specified objects
+        receptacle_object_counts, small_object_counts = self.split_items_into_receptacles_and_objects()
+        specified_object_types = set()
+        specified_object_instances = []
+        if receptacle_object_counts:
+            specified_object_types, specified_object_instances = self.place_specified_objects(receptacle_object_counts)
+        
+        # 6. prepare room assets
+        object_instances = []
+        if self.scene_config.include_other_items:
+            max_floor_objects = 10
+            self.add_other_objects(max_floor_objects=max_floor_objects)
+
+            # 7. place other objects
+            object_instances = self.place_other_objects(specified_object_types)
+
+        # 8. add small objects
+        max_object_types_per_room = 10
+        small_object_instances = []
+        small_object_instances = add_small_objects(
+            object_instances,
+            odb,
+            self.rooms,
+            max_object_types_per_room,
+            (min_x, min_z, max_x, max_z),
+            object_counts=small_object_counts,
+            specified_object_instances=specified_object_instances,
+            receptacle_object_counts=receptacle_object_counts
+        )
+
+        # 9. Prepare scene
+        instances = (
+            floor_instances
+            + object_instances
+            + specified_object_instances
+            + small_object_instances
+        )
+
+        DEBUG = False
+        if DEBUG:
+            for inst in instances:
+                inst["type"] = "kinematic"
+
+        height = max(12, (max_z - min_z) * 1 + 2)
+        log(f"min_x: {min_x}, max_x: {max_x}, min_z: {min_z}, max_z: {max_z}")
+        center = [(min_x + max_x) / 2, height, (min_z + max_z) / 2]
+
+        room_polygon = []
+        for room in self.rooms.values():
+            id = room.room_id
+            polygon = list(room.room_polygon.polygon.exterior.coords)
+            x_center = sum([x for x, _ in polygon]) / len(polygon)
+            z_center = sum([z for _, z in polygon]) / len(polygon)
+            x_size = max([x for x, _ in polygon]) - min([x for x, _ in polygon])
+            z_size = max([z for _, z in polygon]) - min([z for _, z in polygon])
+            room_polygon.append({
+                'room_id':id,
+                'room_type': room.room_type,
+                'position': [x_center, 1.5, z_center],
+                'size': [x_size,3, z_size],
+                'polygon':polygon
+            })
+            # print(f'room {id} polygon: {polygon}')
+
+        infos = {
+            "prompt": "",
+            "instances": instances,
+            "player": player,
+            "agent": agent,
+            "center": center,
+            "room_polygon": room_polygon,
+        }
+        with open("last_scene.json", "w", encoding="utf-8") as f:
+            json.dump(infos, f, ensure_ascii=False, indent=4)
+        return infos
+
+
     
-    
-
-
-

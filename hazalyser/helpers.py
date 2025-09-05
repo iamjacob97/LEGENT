@@ -1,59 +1,18 @@
 from typing import Dict, Any, Optional, Tuple, List
-import random
-import math
 import copy
+import math
+import random
 
-from hazalyser.objects import ObjectDB, get_default_object_db
+from legent.environment.env import Environment, Action 
 from legent.server.rect_placer import RectPlacer
 
-def log(*args, **kwargs):
-    pass
+#-----------controller helpers------------#
+def get_current_scene_state(env: Environment, action: Action = Action()) -> Dict[str, Any]:
+    obs = env.step(action)
+    return obs.game_states
 
-def deepcopy_scene(scene: Dict[str, Any]) -> Dict[str, Any]:
-        return copy.deepcopy(scene)
 
-#------------Scene Parsing------------#
-def split_items_into_receptacles_and_objects(
-        odb: ObjectDB = get_default_object_db(), 
-        items: Optional[Dict[str, int]] = None
-    ) -> Tuple[Dict[str, Any], Dict[str, int]]:
-    """
-    Split user items into receptacles (floor assets) and small objects.
-    - For receptacles: build { type: {"count": n, "objects": [] } }
-    - For small objects: map type/prefab to concrete prefab counts
-    """
-    if not items:
-        return {}, {}
-
-    receptacle_object_counts: Dict[str, Any] = {}
-    small_object_counts: Dict[str, int] = {}
-
-    # Receptacle types are keys in odb.RECEPTACLES; small object types are keys in odb.OBJECT_DICT
-    for name, cnt in items.items():
-        key = name.strip()
-        type_key = key.lower()
-
-        receptacles = set(odb.RECEPTACLES.keys())
-        small_objects = set(odb.OBJECT_DICT.keys()) - receptacles
-
-        if type_key in receptacles:
-            receptacle_object_counts[type_key] = {"count": int(cnt), "objects": []}
-            continue
-
-        # Treat as small object type or prefab
-        if type_key in small_objects:
-            # Choose random prefab per instance
-            for _ in range(int(cnt)):
-                prefab = random.choice(odb.OBJECT_DICT[type_key])
-                small_object_counts[prefab] = small_object_counts.get(prefab, 0) + 1
-        elif key in odb.PREFABS:
-            small_object_counts[key] = small_object_counts.get(key, 0) + int(cnt)
-        else:
-            # Unknown key; ignore silently to stay robust
-            continue
-
-    return receptacle_object_counts, small_object_counts
-
+#------------generator helpers------------#
 # def filter_scene_to_specified_only(scene: Dict[str, Any], items: Optional[Dict[str, int]], odb: ObjectDB) -> Dict[str, Any]:
 #     if not items:
 #         return scene

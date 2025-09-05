@@ -1,12 +1,10 @@
 import re
 from typing import Dict, List, Optional, Tuple, Any
 
-from hazalyser.generator import SceneConfig, SceneGenerator
-from hazalyser.helpers import deepcopy_scene, split_items_into_receptacles_and_objects, get_current_scene_state
+from hazalyser.utils import deepcopy_scene
+from hazalyser.generator import SceneGenerator
+from hazalyser.helpers import get_current_scene_state
 from legent import Environment, ResetInfo, Action
-from legent.scene_generation.objects import get_default_object_db, ObjectDB
-from legent.server.rect_placer import RectPlacer
-
 
 class Controller:
     """
@@ -20,8 +18,8 @@ class Controller:
     - Chat-controlled workflow: "lock_scene()", "reset_scene()", "quit()"
     """
 
-    def __init__(self, odb: ObjectDB = get_default_object_db()) -> None:
-        self.odb: ObjectDB = odb
+    def __init__(self, scene_generator: SceneGenerator = SceneGenerator()) -> None:
+        self.scene_generator: SceneGenerator = scene_generator
         self._locked_scene: Optional[Dict[str, Any]] = None
         self._current_scene: Optional[Dict[str, Any]] = None
         self._running: bool = False
@@ -30,10 +28,11 @@ class Controller:
             "#LOCK": self._lock_scene,
             "#UNLOCK": self._unlock_scene,
             "#RESET": self._reset_scene,
-            "#SAVE": self._save_scene,
+            "#COMMIT": self._commit_scene,
+            "#RELOAD": self._reload_scene,
         }
     
-    def start(self, scene_config: SceneConfig = SceneConfig(), env_path: str = "auto") -> None:
+    def start(self, env_path: str = "auto") -> None:
         """
         Start the Controller.
         """
@@ -43,7 +42,7 @@ class Controller:
         marked = False
 
         try:
-            self._new_scene(scene_config, env)
+            self._new_scene(env)
             while self._running:
                 obs = env.step()
                 cmd = (obs.text or "").strip()
@@ -83,7 +82,7 @@ class Controller:
                 
                 elif cmd == "#NEW":
                     if not self._locked_scene:
-                        self._new_scene(scene_config, env)
+                        self._new_scene(env)
                         marked = False
                     else:
                         action.text = "Scene already locked. Use #RESET to reset the locked scene or #UNLOCK to unlock the scene."
@@ -96,23 +95,9 @@ class Controller:
         finally:
             env.close()
 
-    def generate_candidate(self, scene_config: SceneConfig) -> Dict[str, Any]:
-        """
-        Generate a single-room scene candidate using LEGENT's SceneGenerator.
-        """
-        odb = self.odb
-        items = scene_config.items
-        # Split user items into receptacles (floor assets) and small objects
-        recpt_counts, small_prefab_counts = split_items_into_receptacles_and_objects(odb, items)
-
-        generator = SceneGenerator(scene_config, odb)
-        scene = generator.generate(object_counts=small_prefab_counts, receptacle_object_counts=recpt_counts)
-
-        return scene
-        
         # ---------- Internals ----------
-    def _new_scene(self, scene_config: SceneConfig, env: Environment) -> None:
-        scene = self.generate_candidate(scene_config)
+    def _new_scene(self, env: Environment) -> None:
+        scene = self.scene_generator.generate()
         self._current_scene = scene
         env.reset(ResetInfo(scene=scene))    
 
@@ -214,11 +199,37 @@ class Controller:
         action.text = "Scene unlocked."
         env.step(action)
 
-    def _save_scene(self, env: Environment, action: Action) -> None:
+    def _commit_scene(self, env: Environment, action: Action) -> None:
         """Save current scene state of the locked scene"""
         if not self._locked_scene:
             action.text = "No scene locked. Cannot save."
             env.step(action)
         else:
             current_state = get_current_scene_state(env)
+            obs_instances = current_state["instances"]
+            locked_instances = self._locked_scene["instances"]
+            print(locked_instances, "\n")
+
+            self._locked_scene["player"]["position"] = current_state["player"]["position"]
+            self._locked_scene["player"]["rotation"] = current_state["player"]["rotation"]
+            self._locked_scene["agent"]["position"] = current_state["agent"]["position"]
+            self._locked_scene["agent"]["rotation"] = current_state["agent"]["rotation"]
+            
+            num_objects = len(obs_instances)
+            for obj_id in range(num_objects):
+                if locked_instances[obj_id]["prefab"] in obs_instances[obj_id]["prefab"]:
+                    self._locked_scene["instances"][obj_id]["position"] = obs_instances[obj_id]["position"]
+                    self._locked_scene["instances"][obj_id]["rotation"] = obs_instances[obj_id]["rotation"]
+
+            print(self._locked_scene["instances"])
+            action.text = "Scene saved."
+            env.step(action)
     
+    def  _reload_scene(self, env: Environment, action: Action) -> None:
+        if not self._locked_scene:
+            action.text = "No scene locked. Cannot reload."
+            env.step(action)
+        else:
+            env.reset(ResetInfo(scene=self._locked_scene))
+            action.text = "Scene reloaded."
+            env.step(action)

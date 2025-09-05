@@ -1,4 +1,4 @@
-from hazalyser.controller import Controller
+from hazalyser import Controller
 
 
 controller = Controller()
