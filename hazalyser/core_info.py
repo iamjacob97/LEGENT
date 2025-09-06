@@ -1,7 +1,6 @@
 from legent import Environment
 from legent.action.action import ResetInfo
 from legent.scene_generation.objects import get_default_object_db
-from legent.scene_generation.generator import HouseGenerator
 
 odb = get_default_object_db()
 
@@ -46,6 +45,7 @@ try:
         "prompt": ""
     }
     obs = env.reset(ResetInfo(scene=scene))
-    print(obs.game_states["instances"])
+    print(scene)
+    print(obs.game_states)
 finally:
     env.close()

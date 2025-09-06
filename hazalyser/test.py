@@ -1,5 +1,4 @@
-from hazalyser import Controller
-
+from hazalyser import SceneConfig, SceneGenerator, Controller
 
 controller = Controller()
 

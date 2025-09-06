@@ -3,6 +3,7 @@ import copy
 import math
 import random
 
+from hazalyser.utils import convert_vector
 from legent.environment.env import Environment, Action 
 from legent.server.rect_placer import RectPlacer
 
@@ -10,6 +11,21 @@ from legent.server.rect_placer import RectPlacer
 def get_current_scene_state(env: Environment, action: Action = Action()) -> Dict[str, Any]:
     obs = env.step(action)
     return obs.game_states
+
+def update_position_and_rotation(scene: Dict[str, Any], game_states: Dict[str, Any]) -> None:
+    keys = {"instances", "player", "agent"}
+    convertibles = {"position", "rotation"}
+    for key in keys:
+        if key == "instances":
+            scene_instances = scene[key]
+            obs_instances = game_states[key]
+            for obj_id, instance in enumerate(scene_instances):
+                if instance["prefab"] in obs_instances[obj_id]["prefab"]:
+                    for convertible in convertibles:
+                        instance[convertible] = convert_vector(obs_instances[obj_id][convertible])
+        else:
+            for convertible in convertibles:
+                scene[key][convertible] = convert_vector(game_states[key][convertible])                   
 
 
 #------------generator helpers------------#
@@ -537,19 +553,3 @@ def get_current_scene_state(env: Environment, action: Action = Action()) -> Dict
 #     except Exception:
 #         pass
 #     self.odb = get_default_object_db()
-
-# # ---------- Internals ----------
-# def _get_active_scene(self, copy_scene: bool = False) -> Dict[str, Any]:
-#     """Return the scene currently being displayed (locked if available, else current)."""
-#     scene = self._locked_scene if self._locked_scene is not None else self._current_scene
-#     if scene is None:
-#         raise RuntimeError("No scene is active. Call reset_scene() or generate candidates first.")
-#     return self._deepcopy_scene(scene) if copy_scene else scene
-
-# def _apply_scene(self, scene: Dict[str, Any]) -> None:
-#     # Apply to whichever is active: locked scene if present, otherwise current scene
-#     if self._locked_scene is not None:
-#         self._locked_scene = self._deepcopy_scene(scene)
-#     else:
-#         self._current_scene = self._deepcopy_scene(scene)
-#     self.env.reset(ResetInfo(scene=scene))

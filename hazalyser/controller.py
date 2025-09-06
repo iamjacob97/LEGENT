@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Tuple, Any
 
 from hazalyser.utils import deepcopy_scene
 from hazalyser.generator import SceneGenerator
-from hazalyser.helpers import get_current_scene_state
+from hazalyser.helpers import get_current_scene_state, update_position_and_rotation
 from legent import Environment, ResetInfo, Action
 
 class Controller:
@@ -206,22 +206,8 @@ class Controller:
             env.step(action)
         else:
             current_state = get_current_scene_state(env)
-            obs_instances = current_state["instances"]
-            locked_instances = self._locked_scene["instances"]
-            print(locked_instances, "\n")
+            update_position_and_rotation(self._locked_scene, current_state)
 
-            self._locked_scene["player"]["position"] = current_state["player"]["position"]
-            self._locked_scene["player"]["rotation"] = current_state["player"]["rotation"]
-            self._locked_scene["agent"]["position"] = current_state["agent"]["position"]
-            self._locked_scene["agent"]["rotation"] = current_state["agent"]["rotation"]
-            
-            num_objects = len(obs_instances)
-            for obj_id in range(num_objects):
-                if locked_instances[obj_id]["prefab"] in obs_instances[obj_id]["prefab"]:
-                    self._locked_scene["instances"][obj_id]["position"] = obs_instances[obj_id]["position"]
-                    self._locked_scene["instances"][obj_id]["rotation"] = obs_instances[obj_id]["rotation"]
-
-            print(self._locked_scene["instances"])
             action.text = "Scene saved."
             env.step(action)
     

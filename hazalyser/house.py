@@ -45,10 +45,7 @@ class HazardHouse:
     ceiling_height: float
 
 #----------house_builders----------#
-def generate_house_structure(scene_config, unit_size = 2.5):
-    room_spec = scene_config.room_spec
-    dims = scene_config.dims
-
+def generate_house_structure(room_spec, dims, unit_size):
     generate_dims = None
     if dims is not None:
         generate_dims = dims
@@ -72,9 +69,9 @@ def generate_house_structure(scene_config, unit_size = 2.5):
         ceiling_height=ceiling_height,
     )
     
-def generate_interior(room_spec, dims: Optional[Tuple[int, int]] = None) -> np.array:
+def generate_interior(room_spec, dims) -> np.array:
     if dims is None:
-            x_size, z_size = np.random.randint(low=3, high=5, size=2)
+        x_size, z_size = np.random.randint(low=3, high=5, size=2)
     else:
         x_size, z_size = dims
 
