@@ -1,9 +1,8 @@
-from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple, Literal, Callable
 from attrs import define
 import numpy as np
 
-OUTDOOR_ROOM_ID = 1
+OUTDOOR_ROOM_ID = 0
 
 class HazardRoom:
     def __init__(
@@ -39,69 +38,50 @@ class HazardRoomSpec:
 class HazardHouse:
     interior: np.ndarray
     floorplan: np.ndarray
-    connectors: Dict[Tuple[int, int], List[Tuple[Tuple[int, int], Tuple[int, int]]]]
     boundary: Dict[Tuple[int, int], Set[Tuple[Tuple[float, float], Tuple[float, float]]]]
     xz_poly_map: Dict[int, List[Tuple[float, float]]]
     ceiling_height: float
 
 #----------house_builders----------#
 def generate_house_structure(room_spec, dims, unit_size):
+    room_id = room_spec.spec.room_id
+    if room_id == OUTDOOR_ROOM_ID:
+        raise ValueError(f"Room ID {room_id} is reserved.")
     generate_dims = None
     if dims is not None:
         generate_dims = dims
     elif room_spec.dims is not None:
         generate_dims = room_spec.dims()
 
-    interior = generate_interior(room_spec=room_spec, dims=generate_dims)
+    interior = generate_interior(room_id=room_id, dims=generate_dims)
     floorplan = np.pad(interior, pad_width=1, mode="constant", constant_values=OUTDOOR_ROOM_ID)
-    connectors = find_connectors(floorplan)
-    boundary = find_walls(interior, connectors) # TODO: add room_id to walls
+    boundary = find_walls(room_id=room_id, interior=interior)
     boundary = scale_boundary(boundary, scale=unit_size)
-    xz_poly_map = get_xz_poly_map(boundary, room_spec.spec.room_id)
+    xz_poly_map = get_xz_poly_map(boundary, room_id)
 
     ceiling_height = 0
     return HazardHouse(
         interior=interior,
         floorplan=floorplan,
-        connectors=connectors,
         boundary=boundary,
         xz_poly_map=xz_poly_map,
         ceiling_height=ceiling_height,
     )
     
-def generate_interior(room_spec, dims) -> np.array:
+def generate_interior(room_id, dims) -> np.array:
     if dims is None:
         x_size, z_size = np.random.randint(low=3, high=5, size=2)
     else:
         x_size, z_size = dims
 
-    interior = np.full((z_size, x_size), room_spec.spec.room_id, dtype=int)
+    interior = np.full((z_size, x_size), room_id, dtype=int)
     
     return interior
-    
-def find_connectors(floorplan: np.array):
-    connectors = defaultdict(list)
-    for row in range(len(floorplan) - 1):
-        for col in range(len(floorplan[0]) - 1):
-            a = floorplan[row, col]
-            b = floorplan[row, col + 1]
-            if a != b:
-                connectors[(int(min(a, b)), int(max(a, b)))].append(
-                    ((row - 1, col), (row, col))
-                )
-            b = floorplan[row + 1, col]
-            if a != b:
-                connectors[(int(min(a, b)), int(max(a, b)))].append(
-                    ((row, col - 1), (row, col))
-                )
-    return connectors
 
-def find_walls(interior, connectors):
-    """Find walls for ESHA single room - optimized version."""
+def find_walls(room_id, interior):
+    """Find walls for single room."""
     boundary = {}
-    if len(connectors) != 1:
-        raise ValueError("Expected 1 wall group")
-    wall_group_id = next(iter(connectors))
+    wall_group_id = (min(OUTDOOR_ROOM_ID, room_id), max(OUTDOOR_ROOM_ID, room_id))
 
     rows, cols = interior.shape
     walls = set()
@@ -132,7 +112,7 @@ def scale_boundary(boundary, scale, precision: int = 3):
         out[key] = scaled_lines
     return out
 
-def get_xz_poly_map(boundary, room_id):
+def get_xz_poly_map(boundary, room_id: int):
     """Get the xz_poly_map for the house."""
     WALL_THICKNESS = 0.1
 

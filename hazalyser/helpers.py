@@ -1,7 +1,9 @@
 from typing import Dict, Any, Optional, Tuple, List
+import os
 import copy
 import math
 import random
+import trimesh
 
 from hazalyser.utils import convert_vector
 from legent.environment.env import Environment, Action 
@@ -27,47 +29,36 @@ def update_position_and_rotation(scene: Dict[str, Any], game_states: Dict[str, A
             for convertible in convertibles:
                 scene[key][convertible] = convert_vector(game_states[key][convertible])                   
 
-
 #------------generator helpers------------#
-# def filter_scene_to_specified_only(scene: Dict[str, Any], items: Optional[Dict[str, int]], odb: ObjectDB) -> Dict[str, Any]:
-#     if not items:
-#         return scene
 
-#     keep_types = {k.lower() for k in items.keys()}
-#     def is_keep(inst: Dict[str, Any]) -> bool:
-#         if inst["prefab"] in {"", None}:  # player/agent markers
-#             return True
-#         # Always keep structural elements (floors, walls)
-#         prefab = inst["prefab"]
-#         pinfo = odb.PREFABS.get(prefab)
-#         if not pinfo:
-#             return True
-#         # Floor/wall tags
-#         if prefab.lower().find("floor") != -1 or prefab.lower().find("wall") != -1 or prefab.lower().find("door") != -1:
-#             return True
-#         # Keep if prefab's type or its name matches provided items
-#         otype = odb.OBJECT_TO_TYPE.get(prefab, "")
-#         return (otype in keep_types) or (prefab.lower() in keep_types)
+def get_mesh_size(input_file):
+    """Get the bounding box of a mesh file.
+    Args:
+        input_file: str, the path of the mesh file.
+    Returns:
+        mesh_size: np.ndarray, the size of the mesh file.
+    """
+    mesh = trimesh.load(input_file)
+    min_vals, max_vals = mesh.bounds[0], mesh.bounds[1]
+    return max_vals - min_vals
 
-#     filtered = [inst for inst in scene["instances"] if is_keep(inst)]
-#     # Ensure receptacle parents exist for retained small objects
-#     needed_parents = set()
-#     for inst in filtered:
-#         if is_small_object_instance(inst):
-#             parent = inst.get("parent")
-#             if isinstance(parent, str) and parent:
-#                 needed_parents.add(parent)
-#     if needed_parents:
-#         parent_instances = [inst for inst in scene["instances"] if inst.get("prefab") in needed_parents]
-#         # Merge without duplication by prefab+position
-#         existing_keys = {(i.get("prefab"), tuple(i.get("position", []))) for i in filtered}
-#         for p in parent_instances:
-#             key = (p.get("prefab"), tuple(p.get("position", [])))
-#             if key not in existing_keys:
-#                 filtered.append(p)
-#     new_scene = deepcopy_scene(scene)
-#     new_scene["instances"] = filtered
-#     return new_scene
+def get_asset_path(asset_folder: str="obsAssets") -> str:
+    """Get the path of a asset."""
+    path = os.path.abspath(asset_folder)
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Asset folder {path} does not exist.")
+
+    return path
+
+
+
+
+
+
+
+
+
 
 # def is_small_object_instance(self, inst: Dict[str, Any]) -> bool:
 #     # Heuristic: small objects are interactables whose parent is a receptacle or have parent not -1

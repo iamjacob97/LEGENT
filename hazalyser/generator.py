@@ -6,6 +6,7 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Any, Union, Literal, Callable, Set
 
+from hazalyser.helpers import get_asset_path, get_mesh_size
 from hazalyser.utils import log, convert_vector
 from legent.utils.math import look_rotation
 from hazalyser.house import HazardRoom, HazardRoomSpec, HazardHouse, generate_house_structure
@@ -21,7 +22,7 @@ RoomType = str  # "Bedroom" | "LivingRoom" | "Kitchen" | "Bathroom"
 @dataclass
 class SceneConfig:
     room_spec: HazardRoomSpec = HazardRoomSpec(room_spec_id="ESHA-SingleRoom", 
-                                           spec=HazardRoom(room_id=3, 
+                                           spec=HazardRoom(room_id=1, 
                                                         room_type=random.choice(["Bedroom", "LivingRoom", "Kitchen", "Bathroom"])))
     dims: Tuple[int, int] = None # (x_size, z_size) in cell units
     subject: Optional[Dict[str, int]] = None # {subject_prefab: prefab}
@@ -50,7 +51,7 @@ class SceneGenerator(HouseGenerator):
                 f"rooms={len(self.rooms)}, "
                 f"unit_size={self.unit_size}, "
                 f"scale_ratio={self.scale_ratio:.2f})") 
-
+    
     def generate_structure(self) -> HazardHouse:
         house_structure = generate_house_structure(room_spec=self.scene_config.room_spec, dims=self.scene_config.dims, unit_size=self.unit_size)
         return house_structure
@@ -58,7 +59,7 @@ class SceneGenerator(HouseGenerator):
     def add_floors_and_walls(self, house_structure, room_spec, odb, prefabs, add_ceiling = False, remove_out_walls = False):
         """single room with no doors."""
         room_id = room_spec.spec.room_id
-        room2wall = {room_id: DEFAULT_WALL_PREFAB}
+        room2wall = {room_id: DEFAULT_WALL_PREFAB, 0: DEFAULT_WALL_PREFAB}
         
         WALL_PREFAB = room2wall[room_id]
         wall_x_size, wall_y_size, wall_z_size = (
@@ -69,7 +70,6 @@ class SceneGenerator(HouseGenerator):
         log(
             f"wall_x_size: {wall_x_size}, wall_y_size: {wall_y_size}, wall_z_size: {wall_z_size}"
         )
-        room2wall.update({0: DEFAULT_WALL_PREFAB})
         room2floor = {room_id: np.random.choice(odb.MY_OBJECTS["floor"])}
         FLOOR_PREFAB = room2floor[room_id]
         floor_x_size, floor_y_size, floor_z_size = (
@@ -81,9 +81,6 @@ class SceneGenerator(HouseGenerator):
             f"floor_x_size: {floor_x_size}, floor_y_size: {floor_y_size}, floor_z_size: {floor_z_size}"
         )
         floors = house_structure.floorplan
-        # convert 1 in floors to 0
-        floors = np.where(floors == 1, 0, floors)
-        log(f"floors:\n{floors}")
 
         floor_instances = []
         # generate walls based on the 0-1 boundaries
@@ -92,9 +89,7 @@ class SceneGenerator(HouseGenerator):
                 if floors[i][j] != 0:
                     FLOOR_PREFAB = room2floor[floors[i][j]]
 
-                    x, z = (i + 0.5 - 1) * self.unit_size, (
-                        j + 0.5 - 1
-                    ) * self.unit_size
+                    x, z = (i + 0.5 - 1) * self.unit_size, (j + 0.5 - 1) * self.unit_size
                     floor_instances.append(
                         {
                             "prefab": FLOOR_PREFAB,
@@ -237,8 +232,8 @@ class SceneGenerator(HouseGenerator):
         polygon = floor_polygons[f"room|{room_id}"]
         room = Room(polygon=polygon, room_type=room_type, room_id=room_id, odb=self.odb)
         self.rooms[room_id] = room
-    
-    def add_human_and_agent(self, floors):
+
+    def add_player_agent_subject(self, floors):
         def get_bbox_of_floor(x, z):
             x, z = (x - 0.5) * self.unit_size, (z - 0.5) * self.unit_size
             return (
@@ -248,9 +243,7 @@ class SceneGenerator(HouseGenerator):
                 z + self.half_unit_size,
             )
 
-        def random_xz_for_agent(
-            eps, floors
-        ):  # To prevent being positioned in the wall and getting pushed out by collision detection.
+        def random_xz_for_agent(eps, floors):  # To prevent being positioned in the wall and getting pushed out by collision detection.
             # ravel the floor
             ravel_floors = floors.ravel()
             # get the index of the floor
@@ -264,9 +257,7 @@ class SceneGenerator(HouseGenerator):
             # get the bbox of the floor
             bbox = get_bbox_of_floor(x, z)
             # uniformly sample from the bbox, with eps
-            x, z = np.random.uniform(bbox[0] + eps, bbox[2] - eps), np.random.uniform(
-                bbox[1] + eps, bbox[3] - eps
-            )
+            x, z = np.random.uniform(bbox[0] + eps, bbox[2] - eps), np.random.uniform(bbox[1] + eps, bbox[3] - eps)
             return x, z
 
         ### STEP 3: Randomly place the player and playmate (AI agent)
@@ -302,13 +293,36 @@ class SceneGenerator(HouseGenerator):
             if ok:
                 log(f"playmate x: {x}, z: {z}")
                 break
+        #place the subject
+        subject = []
+        if self.scene_config.subject:
+            asset = self.scene_config.subject
+            asset_path = os.path.join(get_asset_path(), "subject", asset)
+            assert os.path.exists(asset_path), f"{asset_path} does not exist"
+            size = get_mesh_size(asset_path)
+            x_size = size[0]
+            z_size = size[2]
+            while True:
+                x, z = random_xz_for_agent(eps=0.5, floors=floors)
+                subject.append({
+                    "prefab": asset_path,
+                    "position": [x, size[1]/2, z],
+                    "rotation": [0, np.random.uniform(0, 360), 0],
+                    "scale": [1, 1, 1],
+                    "parent": -1,
+                    "type": "kinematic",
+                })
+                ok = self.placer.place("subject", x, z, x_size, z_size)
+                if ok:
+                    log(f"subject x: {x}, z: {z}")
+                    break
 
         # player lookat the playmate
         vs, vt = np.array(player["position"]), np.array(playmate["position"])
         vr = look_rotation(vt - vs)
         player["rotation"] = [0, vr[1], 0]
 
-        return player, playmate
+        return player, playmate, subject
 
     def split_items_into_receptacles_and_objects(self):
         """
@@ -505,7 +519,7 @@ class SceneGenerator(HouseGenerator):
         odb = self.odb
 
         object_instances = []
-
+        
         for a in room.assets:
             if isinstance(a, Asset):
                 prefab = a.asset_id
@@ -698,8 +712,7 @@ class SceneGenerator(HouseGenerator):
         self.get_rooms(room_spec=room_spec, floor_polygons=floor_polygons)
 
         # 4. Add human and agent
-        player, agent = self.add_human_and_agent(floors)
-        # Note: agent prefab is already set in add_human_and_agent() method
+        player, agent, subject = self.add_player_agent_subject(floors)
 
         # player = {
         #     "prefab": "",
@@ -746,12 +759,9 @@ class SceneGenerator(HouseGenerator):
         )
 
         # 9. Prepare scene
-        instances = (
-            floor_instances
-            + object_instances
-            + specified_object_instances
-            + small_object_instances
-        )
+        instances = (floor_instances + object_instances + specified_object_instances + small_object_instances + subject)
+        print(instances) 
+                
 
         DEBUG = False
         if DEBUG:
@@ -789,8 +799,6 @@ class SceneGenerator(HouseGenerator):
         }
         # with open("last_scene.json", "w", encoding="utf-8") as f:
         #     json.dump(infos, f, ensure_ascii=False, indent=4)
-        print(infos["agent"])
         return infos
-
 
     
