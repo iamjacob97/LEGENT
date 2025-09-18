@@ -165,7 +165,6 @@ def get_xz_poly_map(boundary, room_id: int):
     room_wall_loop = list(zip(points, points[1:] + [points[0]]))
     return {room_id: room_wall_loop}
 
-
 def get_wall_loop(walls):
     walls_left = walls.copy()
     start_wall = list(walls)[0]

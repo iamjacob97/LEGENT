@@ -5,7 +5,7 @@
 
 # Core Controller and Configuration
 from .controller import Controller
-from .generator import SceneConfig, SceneGenerator
+from .generator import SceneConfig
 
 # House Generation
 from .house import HazardRoom, HazardRoomSpec, HazardHouse, generate_house_structure
@@ -19,7 +19,6 @@ from .objects import ObjectDB, get_default_object_db
 __all__ = [
     # Core Classes
     "Controller",          # Main controller for scene generation and interaction
-    "SceneGenerator",      # Extended HouseGenerator with ESHA-specific functionality
     
     # Configuration and Specification
     "SceneConfig",         # Configuration for scene generation (dimensions, items, etc.)

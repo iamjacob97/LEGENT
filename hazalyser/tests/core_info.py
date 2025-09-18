@@ -1,7 +1,7 @@
-from legent import Environment
-from legent.action.action import ResetInfo
+from legent import Environment, Action, ResetInfo
+from legent.action.api import TakePhoto
 from legent.scene_generation.objects import get_default_object_db
-from hazalyser.helpers import get_mesh_size
+from hazalyser.helpers import LLM_ANALYSIS_PATH, get_mesh_size
 
 odb = get_default_object_db()
 
@@ -55,9 +55,8 @@ try:
         "prompt": ""
     }
     obs = env.reset(ResetInfo(scene=scene))
-    print(scene)
-    print(obs.game_states)
-    while True:
-        env.step()
+    api_calls = [TakePhoto(f"{LLM_ANALYSIS_PATH}/test.png", [-5, 1.7, 0], [0,90,0])]
+    obs = env.step(Action(api_calls=api_calls))
+
 finally:
     env.close()

@@ -173,3 +173,6 @@ docs/*.svg
 docs/**/index.md
 
 !legent/dataset/task-prompts.json
+
+# Agents.md
+Agents.md

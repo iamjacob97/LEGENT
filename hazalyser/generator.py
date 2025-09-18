@@ -4,9 +4,9 @@ import copy
 import random
 import numpy as np
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Any, Union, Literal, Callable, Set
+from typing import Dict, Optional, Tuple, Any
 
-from hazalyser.helpers import get_asset_path, get_mesh_size
+from hazalyser.helpers import SUBJECT_PATH, SceneBundle, get_mesh_size
 from hazalyser.utils import log, convert_vector
 from legent.utils.math import look_rotation
 from hazalyser.house import HazardRoom, HazardRoomSpec, HazardHouse, generate_house_structure
@@ -22,16 +22,19 @@ RoomType = str  # "Bedroom" | "LivingRoom" | "Kitchen" | "Bathroom"
 @dataclass
 class SceneConfig:
     room_spec: HazardRoomSpec = HazardRoomSpec(room_spec_id="ESHA-SingleRoom", 
-                                           spec=HazardRoom(room_id=1, 
-                                                        room_type=random.choice(["Bedroom", "LivingRoom", "Kitchen", "Bathroom"])))
+                                               spec=HazardRoom(room_id=1, 
+                                               room_type=random.choice(["Bedroom", "LivingRoom", "Kitchen", "Bathroom"])))
     dims: Tuple[int, int] = None # (x_size, z_size) in cell units
     subject: Optional[Dict[str, int]] = None # {subject_prefab: prefab}
-    include_other_items: bool = True  # include LEGENT proc objects in addition to specified items
+    subject_scale: Optional[Tuple] = (1, 1, 1)
+    subject_info: Optional[str] = ""
     items: Optional[Dict[str, int]] = None  # user-specified dictionary; keys are LEGENT types (e.g., "orange", "table")
+    framework: Optional[str] = "esha"
+    method: Optional[str] = ""
+    analysis_folder: str = "scene_analysis"
 
 DEFAULT_UNIT_SIZE = 2.5
 DEFAULT_FLOOR_SIZE = 2.5
-DEFAULT_WALL_PREFAB = "LowPolyInterior2_Wall1_C1_01"
 MAX_PLACEMENT_ATTEMPTS = 17
 WALL_THICKNESS = 0.075
 
@@ -39,7 +42,7 @@ class SceneGenerator(HouseGenerator):
     def __init__(self, scene_config: SceneConfig = SceneConfig(), odb: ObjectDB = get_default_object_db(), unit_size = DEFAULT_UNIT_SIZE):
         self.scene_config = scene_config
         self.odb = odb
-        self.rooms: Dict[str, HazardRoom] = dict()
+        self.rooms: Dict[str, Room] = dict()
         self.unit_size = unit_size
         self.half_unit_size = unit_size / 2  # Half of the size of a unit in the grid
         self.scale_ratio = unit_size / DEFAULT_FLOOR_SIZE
@@ -59,7 +62,8 @@ class SceneGenerator(HouseGenerator):
     def add_floors_and_walls(self, house_structure, room_spec, odb, prefabs, add_ceiling = False, remove_out_walls = False):
         """single room with no doors."""
         room_id = room_spec.spec.room_id
-        room2wall = {room_id: DEFAULT_WALL_PREFAB, 0: DEFAULT_WALL_PREFAB}
+        wall_prefab = np.random.choice(odb.MY_OBJECTS["wall"])
+        room2wall = {room_id: wall_prefab, 0: wall_prefab}
         
         WALL_PREFAB = room2wall[room_id]
         wall_x_size, wall_y_size, wall_z_size = (
@@ -127,7 +131,6 @@ class SceneGenerator(HouseGenerator):
                     if a != a_col:
                         x = i + 1 - 1
                         z = j + 0.5 - 1
-                        y_rot = 90
 
                         x = x * self.unit_size
                         z = z * self.unit_size
@@ -138,7 +141,6 @@ class SceneGenerator(HouseGenerator):
                         left_wall_prefab = room2wall[floors[i][j]]
                         right_wall_prefab = room2wall[floors[i + 1][j]]
 
-                        scale = [self.scale_ratio, 1, 0.5]
                         left_scale = [
                             self.scale_ratio,
                             self.align_wall_height_scale(left_wall_prefab),
@@ -153,7 +155,6 @@ class SceneGenerator(HouseGenerator):
 
                         left_rotation = 270
                         right_rotation = 90
-
                         
                         left_wall = self.format_object(
                             left_wall_prefab,
@@ -181,7 +182,6 @@ class SceneGenerator(HouseGenerator):
                     if a != a_row:
                         x = i + 0.5 - 1
                         z = j + 1 - 1
-                        y_rot = 0
 
                         x = x * self.unit_size
                         z = z * self.unit_size
@@ -192,7 +192,6 @@ class SceneGenerator(HouseGenerator):
                         up_wall_prefab = room2wall[floors[i][j]]
                         down_wall_prefab = room2wall[floors[i][j + 1]]
 
-                        scale = [self.scale_ratio, 1, 0.5]
                         up_scale = [
                             self.scale_ratio,
                             self.align_wall_height_scale(up_wall_prefab),
@@ -297,23 +296,26 @@ class SceneGenerator(HouseGenerator):
         subject = []
         if self.scene_config.subject:
             asset = self.scene_config.subject
-            asset_path = os.path.join(get_asset_path(), "subject", asset)
+            asset_path = os.path.join(SUBJECT_PATH, asset)
             assert os.path.exists(asset_path), f"{asset_path} does not exist"
-            size = get_mesh_size(asset_path)
-            x_size = size[0]
-            z_size = size[2]
+            subject_size = get_mesh_size(asset_path)
+            subject_scale = self.scene_config.subject_scale
+
+            x_size = subject_size[0]
+            z_size = subject_size[2]
             while True:
                 x, z = random_xz_for_agent(eps=0.5, floors=floors)
-                subject.append({
-                    "prefab": asset_path,
-                    "position": [x, size[1]/2, z],
-                    "rotation": [0, np.random.uniform(0, 360), 0],
-                    "scale": [1, 1, 1],
-                    "parent": -1,
-                    "type": "kinematic",
-                })
+                
                 ok = self.placer.place("subject", x, z, x_size, z_size)
                 if ok:
+                    subject.append({
+                        "prefab": asset_path,
+                        "position": [x, (subject_size[1] * subject_scale[1])/2, z],
+                        "rotation": [0, np.random.uniform(0, 360), 0],
+                        "scale": subject_scale,
+                        "parent": -1,
+                        "type": "kinematic",
+                    })
                     log(f"subject x: {x}, z: {z}")
                     break
 
@@ -398,12 +400,7 @@ class SceneGenerator(HouseGenerator):
                     maxz -= z_size / 2 + WALL_THICKNESS
                     x = np.random.uniform(minx, maxx)
                     z = np.random.uniform(minz, maxz)
-                    bbox = (
-                        x - x_size / 2,
-                        z - z_size / 2,
-                        x + x_size / 2,
-                        z + z_size / 2,
-                    )
+                    bbox = (x - x_size / 2, z - z_size / 2, x + x_size / 2, z + z_size / 2)
                     if self.placer.place_rectangle(receptacle, bbox):
                         specified_object_instances.append(
                             {
@@ -423,7 +420,7 @@ class SceneGenerator(HouseGenerator):
                         break
         return specified_object_types, specified_object_instances
 
-    def add_other_objects(self, max_floor_objects= 10):
+    def add_other_objects(self, max_floor_objects):
         room_id = self.scene_config.room_spec.spec.room_id
         room = self.rooms[room_id]
         odb = self.odb
@@ -431,17 +428,11 @@ class SceneGenerator(HouseGenerator):
         spawnable_asset_group_info = self.get_spawnable_asset_group_info()
         
         asset = None
-        spawnable_asset_groups = spawnable_asset_group_info[
-            spawnable_asset_group_info[f"in{room.room_type}s"] > 0
-        ]
+        spawnable_asset_groups = spawnable_asset_group_info[spawnable_asset_group_info[f"in{room.room_type}s"] > 0]
 
-        floor_types, spawnable_assets = odb.FLOOR_ASSET_DICT[
-            (room.room_type, room.split)
-        ]
+        floor_types, spawnable_assets = odb.FLOOR_ASSET_DICT[(room.room_type, room.split)]
 
-        priority_asset_types = copy.deepcopy(
-            odb.PRIORITY_ASSET_TYPES.get(room.room_type, [])
-        )
+        priority_asset_types = copy.deepcopy(odb.PRIORITY_ASSET_TYPES.get(room.room_type, []))
 
         for i in range(max_floor_objects):
             cache_rectangles = i != 0 and asset is None
@@ -489,18 +480,14 @@ class SceneGenerator(HouseGenerator):
                 added_asset_types.extend([o["assetType"] for o in asset["objects"]])
 
                 if not asset["allowDuplicates"]:
-                    spawnable_asset_groups = spawnable_asset_groups.query(
-                        f"assetGroupName!='{asset['assetGroupName']}'"
-                    )
+                    spawnable_asset_groups = spawnable_asset_groups.query(f"assetGroupName!='{asset['assetGroupName']}'")
 
             for asset_type in added_asset_types:
                 # Remove spawned object types from `priority_asset_types` when appropriate
                 if asset_type in priority_asset_types:
                     priority_asset_types.remove(asset_type)
 
-                allow_duplicates_of_asset_type = odb.PLACEMENT_ANNOTATIONS.loc[
-                    asset_type.lower()
-                ]["multiplePerRoom"]
+                allow_duplicates_of_asset_type = odb.PLACEMENT_ANNOTATIONS.loc[asset_type.lower()]["multiplePerRoom"]
 
                 if not allow_duplicates_of_asset_type:
                     # NOTE: Remove all asset groups that have the type
@@ -512,15 +499,17 @@ class SceneGenerator(HouseGenerator):
                     spawnable_assets = spawnable_assets[
                         spawnable_assets["assetType"] != asset_type
                     ]
+        
+        return spawnable_asset_groups, spawnable_assets
     
-    def place_other_objects(self, specified_object_types):
+    def place_other_objects(self, specified_object_types, current_num_assets = 0):
         room_id = self.scene_config.room_spec.spec.room_id
         room = self.rooms[room_id]
         odb = self.odb
 
         object_instances = []
         
-        for a in room.assets:
+        for a in room.assets[current_num_assets:]:
             if isinstance(a, Asset):
                 prefab = a.asset_id
                 prefab_size = odb.PREFABS[prefab]["size"]
@@ -690,22 +679,26 @@ class SceneGenerator(HouseGenerator):
         z_size = interior.shape[1]
 
         min_x, min_z, max_x, max_z = (0, 0, x_size * self.unit_size, z_size * self.unit_size)
+        room_area = max_x * max_z
+
         self.placer = RectPlacer((min_x, min_z, max_x, max_z))
-        
+
+        max_floor_objects = max(5, min(19, int(room_area / 5)))
+
         # 2. Add floors and walls
         floor_instances, floors = self.add_floors_and_walls(house_structure, room_spec, odb, prefabs)
         # add light
-        light_prefab = "LowPolyInterior2_Light_04"
-        light_y_size = prefabs[light_prefab]["size"]["y"]
-        floor_instances.append(
-            {
-                "prefab": "LowPolyInterior2_Light_04",
-                "position": [max_x / 2, 3 - light_y_size / 2, max_z / 2],
-                "rotation": [0, 0, 0],
-                "scale": [1, 1, 1],
-                "type": "kinematic",
-            }
-        )
+        # light_prefab = "LowPolyInterior2_Light_04"
+        # light_y_size = prefabs[light_prefab]["size"]["y"]
+        # floor_instances.append(
+        #     {
+        #         "prefab": "LowPolyInterior2_Light_04",
+        #         "position": [max_x / 2, 3 - light_y_size / 2, max_z / 2],
+        #         "rotation": [0, 0, 0],
+        #         "scale": [1, 1, 1],
+        #         "type": "kinematic",
+        #     }
+        # )
         
         # 3. Room Initialization
         floor_polygons = self.get_floor_polygons(house_structure.xz_poly_map)
@@ -738,14 +731,13 @@ class SceneGenerator(HouseGenerator):
         
         # 6. prepare room assets
         object_instances = []
-        max_floor_objects = 10
-        self.add_other_objects(max_floor_objects=max_floor_objects)
+        spawnable_asset_groups, spawnable_assets = self.add_other_objects(max_floor_objects=max_floor_objects)
 
         # 7. place other objects
         object_instances = self.place_other_objects(specified_object_types)
 
         # 8. add small objects
-        max_object_types_per_room = 10
+        max_object_types_per_room = max_floor_objects * 3
         small_object_instances = []
         small_object_instances = add_small_objects(
             object_instances,
@@ -760,7 +752,6 @@ class SceneGenerator(HouseGenerator):
 
         # 9. Prepare scene
         instances = (floor_instances + object_instances + specified_object_instances + small_object_instances + subject)
-        print(instances) 
                 
 
         DEBUG = False
@@ -797,8 +788,7 @@ class SceneGenerator(HouseGenerator):
             "center": center,
             "room_polygon": room_polygon,
         }
+
         # with open("last_scene.json", "w", encoding="utf-8") as f:
         #     json.dump(infos, f, ensure_ascii=False, indent=4)
-        return infos
-
-    
+        return SceneBundle(self, infos, max_floor_objects, spawnable_asset_groups, spawnable_assets, specified_object_types, max_object_types_per_room)

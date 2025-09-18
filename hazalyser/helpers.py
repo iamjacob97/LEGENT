@@ -1,15 +1,45 @@
 from typing import Dict, Any, Optional, Tuple, List
 import os
-import copy
-import math
-import random
 import trimesh
+import importlib.util
 
 from hazalyser.utils import convert_vector
 from legent.environment.env import Environment, Action 
 from legent.server.rect_placer import RectPlacer
+from legent.action.api import SaveTopDownView, TakePhoto
 
-#-----------controller helpers------------#
+package_name = "legent"
+package_path = importlib.util.find_spec(package_name).submodule_search_locations[0]
+
+# Construct the path to the resource
+resource_path = os.path.join(package_path, os.pardir, "hazalyser")
+resource_path = os.path.abspath(resource_path)
+
+AGENT_PATH = os.path.join(resource_path, "obsAssets", "agent")
+SUBJECT_PATH = os.path.join(resource_path, "obsAssets", "subject")
+LLM_ANALYSIS_PATH = os.path.join(resource_path, "llm_analysis")
+
+class SceneBundle:
+    def __init__(self, scene_generator, infos, max_floor_objects, spawnable_asset_groups, spawnable_assets, specified_object_types, max_object_types_per_room):
+        self.generator = scene_generator
+        self.infos = infos
+        self.max_floor_objects = max_floor_objects
+        self.spawnable_asset_groups = spawnable_asset_groups
+        self.spawnable_assets = spawnable_assets
+        self.specified_object_types = specified_object_types
+        self.max_object_types_per_room = max_object_types_per_room
+
+def get_mesh_size(input_file):
+    """Get the bounding box of a mesh file.
+    Args:
+        input_file: str, the path of the mesh file.
+    Returns:
+        mesh_size: np.ndarray, the size of the mesh file.
+    """
+    mesh = trimesh.load(input_file)
+    min_vals, max_vals = mesh.bounds[0], mesh.bounds[1]
+    return max_vals - min_vals
+    
 def get_current_scene_state(env: Environment, action: Action = Action()) -> Dict[str, Any]:
     obs = env.step(action)
     return obs.game_states
@@ -29,67 +59,50 @@ def update_position_and_rotation(scene: Dict[str, Any], game_states: Dict[str, A
             for convertible in convertibles:
                 scene[key][convertible] = convert_vector(game_states[key][convertible])                   
 
-#------------generator helpers------------#
+def is_small_object_instance(self, inst: Dict[str, Any]) -> bool:
+    # Heuristic: small objects are interactables whose parent is a receptacle or have parent not -1
+    if inst.get("type") != "interactable":
+        return False
+    # Many small objects have parent set to receptacle prefab name, or room_id present with is_receptacle False
+    return inst.get("parent", -1) != -1 or not inst.get("is_receptacle", False)
 
-def get_mesh_size(input_file):
-    """Get the bounding box of a mesh file.
-    Args:
-        input_file: str, the path of the mesh file.
-    Returns:
-        mesh_size: np.ndarray, the size of the mesh file.
-    """
-    mesh = trimesh.load(input_file)
-    min_vals, max_vals = mesh.bounds[0], mesh.bounds[1]
-    return max_vals - min_vals
+def matches(self, inst: Dict[str, Any], name: str) -> bool:
+    key = name.lower()
+    if inst["prefab"].lower() == key:
+        return True
+    otype = self.odb.OBJECT_TO_TYPE.get(inst["prefab"], "").lower()
+    return otype == key
 
-def get_asset_path(asset_folder: str="obsAssets") -> str:
-    """Get the path of a asset."""
-    path = os.path.abspath(asset_folder)
+def save_perspectives(analysis_folder: str, scene_bundle: SceneBundle, env: Environment, action: Action = Action(),
+                     camera_height=1.7, width=4096, height=4096, vertical_field_of_view=60):
+    """ Take snapshots from different perspectives """
+    action.text = ""
+    save_path = os.path.join(LLM_ANALYSIS_PATH, analysis_folder)
+    os.makedirs(save_path, exist_ok=True)
+    min_x, min_z, max_x, max_z = scene_bundle.generator.placer.bbox
 
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Asset folder {path} does not exist.")
+    api_calls = [SaveTopDownView(os.path.join(save_path, "top.png"))]
+    action.api_calls = api_calls
+    env.step(action)    
 
-    return path
+    rotations = [[0, 0, 0], [0, 90, 0], [0, 180, 0], [0, 270, 0]]
 
+    positions = [[(max_x - min_x) / 2, camera_height, 0], [0, camera_height, (max_z - min_z) / 2],
+                 [(max_x - min_x) / 2, camera_height, max_z], [max_x, camera_height, (max_z - min_z) / 2]]
 
+    for i, (pos, rot) in enumerate(zip(positions, rotations)):
+        api_calls = [TakePhoto(f"{save_path}/side_{i}.png", pos, rot, width, height, vertical_field_of_view)]
+        action.api_calls = api_calls
+        env.step(action)
+    
+    action.api_calls = []
+    
+    action.text = f"Perspectives saved to filepath {save_path}"
+    env.step(action)
 
+def rebuild_placer(scene: Dict[str, Any], placer: RectPlacer) -> None:
+    new_placer = RectPlacer(placer.bbox)
 
-
-
-
-
-
-
-# def is_small_object_instance(self, inst: Dict[str, Any]) -> bool:
-#     # Heuristic: small objects are interactables whose parent is a receptacle or have parent not -1
-#     if inst.get("type") != "interactable":
-#         return False
-#     # Many small objects have parent set to receptacle prefab name, or room_id present with is_receptacle False
-#     return inst.get("parent", -1) != -1 or not inst.get("is_receptacle", False)
-
-# def matches(self, inst: Dict[str, Any], name: str) -> bool:
-#     key = name.lower()
-#     if inst["prefab"].lower() == key:
-#         return True
-#     otype = self.odb.OBJECT_TO_TYPE.get(inst["prefab"], "").lower()
-#     return otype == key
-
-# def scene_bbox(self, scene: Dict[str, Any]) -> Tuple[float, float, float, float]:
-#     # Conservative bbox from room polygon if available
-#     rx = [p for p in scene.get("room_polygon", [])]
-#     if rx:
-#         xs = []
-#         zs = []
-#         for r in rx:
-#             for x, z in r.get("polygon", []):
-#                 xs.append(x)
-#                 zs.append(z)
-#         if xs and zs:
-#             return (min(xs), min(zs), max(xs), max(zs))
-#     # Fallback from instances
-#     xs = [inst["position"][0] for inst in scene["instances"]]
-#     zs = [inst["position"][2] for inst in scene["instances"]]
-#     return (min(xs) - 2.0, min(zs) - 2.0, max(xs) + 2.0, max(zs) + 2.0)
 
 # def add_random_small_objects(
 #     self,
@@ -323,18 +336,6 @@ def get_asset_path(asset_folder: str="obsAssets") -> str:
 #     scene2 = self._deepcopy_scene(scene)
 #     scene2["instances"] = instances
 #     return scene2
-
-# ---------- Chat-controlled workflow ----------
-
-# # --- Chat-controlled workflow ---
-# def configure_generation(self, room_type: RoomType, items: Optional[Dict[str, int]] = None, include_other_items: bool = True, dims: Optional[Tuple[int, int]] = None) -> None:
-#     """Configure parameters used by reset_scene() and chat control."""
-#     self._gen_params = {
-#         "room_type": room_type,
-#         "items": items,
-#         "include_other_items": include_other_items,
-#         "dims": dims,
-#     }
 
 # # ---------- Controls after selection ----------
 # def level_of_clutter(self, value: float) -> None:

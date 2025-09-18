@@ -473,116 +473,6 @@ class Prompter:
                 continue
         return hazards
 
-    # --------------------------- Rule-based Fallback ------------------------ #
-
-    def _rule_based_hazards(
-        self,
-        parsed: Dict[str, Any],
-        metrics: Dict[str, Any],
-        error: Optional[str],
-    ) -> List[HazardEntry]:
-        hazards: List[HazardEntry] = []
-
-        # Doorway congestion
-        total_doors = metrics["totals"].get("num_doors", 0)
-        if total_doors <= 1 and metrics["totals"].get("num_rooms", 1) >= 1:
-            hazards.append(
-                HazardEntry(
-                    item="Doorway",
-                    category="Environmental Feature",
-                    location="Global",
-                    interaction="Access/Egress",
-                    failure_keyword="Bottleneck",
-                    consequence="Delayed evacuation or path planning failure",
-                    inherent_measures="Prefer wider/dual doors when possible",
-                    safeguards="Dynamic re-routing; doorway occupancy monitoring",
-                    instructions="Avoid blocking doorways; maintain clear egress",
-                    severity="Medium",
-                    likelihood="Possible",
-                    risk_rating="Medium",
-                )
-            )
-
-        # High clutter density
-        for r in metrics["rooms"]:
-            if r["clutter_density_per_m2"] > 1.0:
-                hazards.append(
-                    HazardEntry(
-                        item=f"Room {r['room_id']} ({r['room_type']})",
-                        category="Object",
-                        location=f"Room {r['room_id']}",
-                        interaction="Navigation",
-                        failure_keyword="Collision/Entrapment",
-                        consequence="Increased collision risk and path blockage",
-                        inherent_measures="Lower mass/soft bumpers on platform",
-                        safeguards="Speed limiting; obstacle inflation in planner",
-                        instructions="Reduce clutter; maintain housekeeping",
-                        severity="High",
-                        likelihood="Likely",
-                        risk_rating="High",
-                    )
-                )
-
-        # Movable object interaction
-        for r in metrics["rooms"]:
-            if r["num_movable"] >= 5:
-                hazards.append(
-                    HazardEntry(
-                        item=f"Movable objects in Room {r['room_id']}",
-                        category="Object",
-                        location=f"Room {r['room_id']}",
-                        interaction="Pushing/Displacement",
-                        failure_keyword="Secondary hazards",
-                        consequence="Movables shift into path or create trip hazards",
-                        inherent_measures="Limit pushing force; rounded edges",
-                        safeguards="Contact detection; stop-on-push; replan",
-                        instructions="Secure or reduce movable items",
-                        severity="Medium",
-                        likelihood="Possible",
-                        risk_rating="Medium",
-                    )
-                )
-
-        # Human-agent proximity (if both present)
-        if parsed.get("player") and parsed.get("agent"):
-            hazards.append(
-                HazardEntry(
-                    item="Human-Agent Interaction",
-                    category="Agent",
-                    location="Global",
-                    interaction="Co-presence",
-                    failure_keyword="Near-miss/Collision",
-                    consequence="Personal injury or unsafe interaction",
-                    inherent_measures="Low max force; compliant surfaces",
-                    safeguards="Proximity sensing; speed/force limiting",
-                    instructions="Maintain separation; announce movements",
-                    severity="High",
-                    likelihood="Possible",
-                    risk_rating="High",
-                )
-            )
-
-        # If LLM error, record as note
-        if error:
-            hazards.append(
-                HazardEntry(
-                    item="Analysis Engine",
-                    category="Environmental Feature",
-                    location="N/A",
-                    interaction="N/A",
-                    failure_keyword="LLM unavailable",
-                    consequence="Fallback to rule-based analysis",
-                    inherent_measures="Provide offline heuristics",
-                    safeguards="Retry with cached prompts",
-                    instructions="Configure API key and model",
-                    severity="Low",
-                    likelihood="Possible",
-                    risk_rating="Low",
-                )
-            )
-
-        return hazards
-
     # ------------------------------ Reporting ------------------------------- #
 
     def _compose_report_markdown(
@@ -636,8 +526,6 @@ class Prompter:
 
 
 # ------------------------------ Convenience API ---------------------------- #
-
-
 def run_llm_analysis(
     scene_dict: Dict[str, Any],
     images: Optional[Sequence[str]] = None,
@@ -646,5 +534,3 @@ def run_llm_analysis(
 ) -> Result:
     analyzer = Prompter(api_key=api_key, base_url=base_url)
     return analyzer.analyze(scene_dict=scene_dict, images=images)
-
-
