@@ -8,14 +8,14 @@ from typing import Dict, Optional, Tuple, Any
 
 from hazalyser.helpers import SUBJECT_PATH, SceneBundle, get_mesh_size
 from hazalyser.utils import log, convert_vector
-from legent.utils.math import look_rotation
 from hazalyser.house import HazardRoom, HazardRoomSpec, HazardHouse, generate_house_structure
-from legent.scene_generation.room import Room
 from hazalyser.objects import ObjectDB, get_default_object_db
 from hazalyser.smallObjects import add_small_objects
 from legent.scene_generation.generator import HouseGenerator
 from legent.server.rect_placer import RectPlacer
+from legent.scene_generation.room import Room
 from legent.scene_generation.asset_groups import Asset
+from legent.utils.math import look_rotation
 
 RoomType = str  # "Bedroom" | "LivingRoom" | "Kitchen" | "Bathroom"
 
@@ -25,7 +25,7 @@ class SceneConfig:
                                                spec=HazardRoom(room_id=1, 
                                                room_type=random.choice(["Bedroom", "LivingRoom", "Kitchen", "Bathroom"])))
     dims: Tuple[int, int] = None # (x_size, z_size) in cell units
-    subject: Optional[Dict[str, int]] = None # {subject_prefab: prefab}
+    subject: Optional[str] = None 
     subject_scale: Optional[Tuple] = (1, 1, 1)
     subject_info: Optional[str] = ""
     items: Optional[Dict[str, int]] = None  # user-specified dictionary; keys are LEGENT types (e.g., "orange", "table")
@@ -35,7 +35,7 @@ class SceneConfig:
 
 DEFAULT_UNIT_SIZE = 2.5
 DEFAULT_FLOOR_SIZE = 2.5
-MAX_PLACEMENT_ATTEMPTS = 17
+MAX_PLACEMENT_ATTEMPTS = 9
 WALL_THICKNESS = 0.075
 
 class SceneGenerator(HouseGenerator):
@@ -55,14 +55,14 @@ class SceneGenerator(HouseGenerator):
                 f"unit_size={self.unit_size}, "
                 f"scale_ratio={self.scale_ratio:.2f})") 
     
-    def generate_structure(self) -> HazardHouse:
-        house_structure = generate_house_structure(room_spec=self.scene_config.room_spec, dims=self.scene_config.dims, unit_size=self.unit_size)
+    def generate_structure(self, dims=None) -> HazardHouse:
+        house_structure = generate_house_structure(room_spec=self.scene_config.room_spec, dims=dims or self.scene_config.dims, unit_size=self.unit_size)
         return house_structure
     
-    def add_floors_and_walls(self, house_structure, room_spec, odb, prefabs, add_ceiling = False, remove_out_walls = False):
+    def add_floors_and_walls(self, house_structure, room_spec, odb, prefabs, wall = None, floor = None, add_ceiling = False, remove_out_walls = False):
         """single room with no doors."""
         room_id = room_spec.spec.room_id
-        wall_prefab = np.random.choice(odb.MY_OBJECTS["wall"])
+        wall_prefab = wall or np.random.choice(odb.MY_OBJECTS["wall"])
         room2wall = {room_id: wall_prefab, 0: wall_prefab}
         
         WALL_PREFAB = room2wall[room_id]
@@ -74,7 +74,8 @@ class SceneGenerator(HouseGenerator):
         log(
             f"wall_x_size: {wall_x_size}, wall_y_size: {wall_y_size}, wall_z_size: {wall_z_size}"
         )
-        room2floor = {room_id: np.random.choice(odb.MY_OBJECTS["floor"])}
+        floor_prefab = floor or np.random.choice(odb.MY_OBJECTS["floor"])
+        room2floor = {room_id: floor_prefab}
         FLOOR_PREFAB = room2floor[room_id]
         floor_x_size, floor_y_size, floor_z_size = (
             prefabs[FLOOR_PREFAB]["size"]["x"],
@@ -683,7 +684,7 @@ class SceneGenerator(HouseGenerator):
 
         self.placer = RectPlacer((min_x, min_z, max_x, max_z))
 
-        max_floor_objects = max(5, min(19, int(room_area / 5)))
+        max_floor_objects = max(7, int(room_area / 5))
 
         # 2. Add floors and walls
         floor_instances, floors = self.add_floors_and_walls(house_structure, room_spec, odb, prefabs)
@@ -751,7 +752,7 @@ class SceneGenerator(HouseGenerator):
         )
 
         # 9. Prepare scene
-        instances = (floor_instances + object_instances + specified_object_instances + small_object_instances + subject)
+        instances = (floor_instances + subject + specified_object_instances + object_instances + small_object_instances)
                 
 
         DEBUG = False

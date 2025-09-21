@@ -27,10 +27,8 @@ class HazardRoom:
 class HazardRoomSpec:
     room_spec_id: str
     spec: HazardRoom
-
     dims: Optional[Callable[[], Tuple[int, int]]] = None
     """The (x_size, z_size) dimensions of the house.
-
     Note that this size will later be scaled up by interior_boundary_scale.
     """
      
