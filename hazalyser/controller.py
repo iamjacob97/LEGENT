@@ -3,12 +3,11 @@ import os
 import random
 import re
 
+from hazalyser.helpers import LLM_ANALYSIS_PATH, get_current_scene_state, get_mesh_size, get_spatial_relations, is_small_object_instance, is_subject, update_position_and_rotation, deepcopy_scene
 from hazalyser.smallObjects import add_small_objects
-from hazalyser.utils import deepcopy_scene
 from hazalyser.generator import SceneConfig, SceneBundle, SceneGenerator
-from hazalyser.helpers import LLM_ANALYSIS_PATH, get_current_scene_state, get_mesh_size, is_small_object_instance, is_subject, update_position_and_rotation
 from legent import Environment, ResetInfo, Action
-from legent.action.api import GetSpatialRelations, HideObject, SaveTopDownView, ShowObject, TakePhoto
+from legent.action.api import HideObject, SaveTopDownView, ShowObject, TakePhoto
 from legent.server.rect_placer import RectPlacer
 
 class Controller:
@@ -27,6 +26,7 @@ class Controller:
         self.scene_config: SceneConfig = scene_config
         self._locked_scene_bundle: SceneBundle = None
         self._current_scene_bundle: SceneBundle = None
+        self._committed_scene_bundle: SceneBundle = None
         self._running: bool = False
         self.marked_scenes = []
         self.command_handlers = {
@@ -40,7 +40,8 @@ class Controller:
             "#SPACING+": self._increase_spacing,
             "#SPACING-": self._decrease_spacing,
             "#SAVEINFO": self._save_info,
-            "#ANALYSE": self._analyse
+            "#FWANALYSE": self._fw_analyse,
+            "#MTANALYSE": self._mt_analyse
 
         }
     
@@ -201,9 +202,11 @@ class Controller:
                 return
 
     def _reset_scene(self, env: Environment, action: Action) -> None:
-        env.reset(ResetInfo(scene=self._current_scene_bundle))
+        env.reset(ResetInfo(scene=self._current_scene_bundle.infos))
         action.text = "Scene reset."
         env.step(action)
+        if self._locked_scene_bundle:
+            self._locked_scene_bundle = deepcopy_scene(self._current_scene_bundle)
         
     def _lock_scene(self, env: Environment, action: Action) -> None:
         self._locked_scene_bundle = deepcopy_scene(self._current_scene_bundle)
@@ -212,6 +215,7 @@ class Controller:
 
     def _unlock_scene(self, env: Environment, action: Action) -> None:
         self._locked_scene_bundle = None
+        self._committed_scene_bundle = None
         action.text = "Scene unlocked."
         env.step(action)
 
@@ -223,6 +227,7 @@ class Controller:
         else:
             current_state = get_current_scene_state(env)
             update_position_and_rotation(self._locked_scene_bundle.infos, current_state)
+            self._committed_scene_bundle = deepcopy_scene(self._locked_scene_bundle)
 
             action.text = "Scene saved."
             env.step(action)
@@ -232,11 +237,14 @@ class Controller:
         if not self._locked_scene_bundle:
             action.text = "No scene locked. Cannot reload."
             env.step(action)
-        else:
+        elif self._committed_scene_bundle:
+            self._locked_scene_bundle = deepcopy_scene(self._committed_scene_bundle)
             env.reset(ResetInfo(scene=self._locked_scene_bundle.infos))
             self._locked_scene_bundle._hidden_object_indices.clear()
             action.text = "Scene reloaded."
             env.step(action)
+        else:
+            self._reset_scene(env, action)
 
     def _increase_clutter(self, env: Environment, action: Action) -> None:
         """Increase the clutter of the locked scene"""
@@ -374,10 +382,10 @@ class Controller:
             new_objects = object_instances + small_object_instances
             self._locked_scene_bundle.infos["instances"].extend(new_objects)
 
-            # Reload once per press
-            self._reload_scene(env, action)
+            env.reset(ResetInfo(scene = self._locked_scene_bundle.infos))
             action.text = f"Added {len(object_instances)} furniture and {len(small_object_instances)} small objects."
             env.step(action)
+            self._locked_scene_bundle.clutter_level += 1
         
     def _decrease_clutter(self, env: Environment, action: Action) -> None:
         """Decrease clutter by hiding a bounded batch of objects."""
@@ -387,12 +395,7 @@ class Controller:
         else:
             odb = self._locked_scene_bundle.generator.odb
             instances = self._locked_scene_bundle.infos["instances"]
-            action.text = ""
-            # Build placement map: on_what -> [child ids]
-            action.api_calls = [GetSpatialRelations()]
-            obs = env.step(action)
-            action.api_calls = []
-            object_relations = obs.api_returns.get("object_relations", [])
+            object_relations = get_spatial_relations(env, action)
             placement_info = defaultdict(list)
             for obj in object_relations:
                 placement_info[obj.get("on_what")].append(obj.get("id"))
@@ -438,6 +441,7 @@ class Controller:
 
             action.text = f"Hidden {hidden_now} objects (total {len(already_hidden)}/{max_hidden})."
             env.step(action)
+            self._locked_scene_bundle.clutter_level -= 1
                  
     def _increase_spacing(self, env: Environment, action: Action) -> None:
         if not self._locked_scene_bundle:
@@ -445,6 +449,7 @@ class Controller:
             env.step(action)
             return
         self._resize_room(env, action, delta_cells=(1,1))
+        self._locked_scene_bundle.spacing_level += 1
 
     def _decrease_spacing(self, env: Environment, action: Action) -> None:
         if not self._locked_scene_bundle:
@@ -452,6 +457,7 @@ class Controller:
             env.step(action)
             return
         self._resize_room(env, action, delta_cells=(-1,-1))
+        self._locked_scene_bundle.spacing_level -= 1
 
     def _get_house_dimensions(self, unit_size):
         min_x, min_z, max_x, max_z = self._locked_scene_bundle.generator.placer.bbox
@@ -709,7 +715,7 @@ class Controller:
             analysis_folder = scene_config.analysis_folder
 
             action.text = ""
-            save_path = os.path.join(LLM_ANALYSIS_PATH, analysis_folder)
+            save_path = os.path.join(LLM_ANALYSIS_PATH, analysis_folder, "perspectives")
             os.makedirs(save_path, exist_ok=True)
 
             self._save_perspectives(self, save_path, env, action)
@@ -719,5 +725,10 @@ class Controller:
             action.text = f"Scene info saved to {save_path}"
             env.step(action)
 
-    def _analyse(self, env: Environment, action: Action) -> None:
+    def _fw_analyse(self, env: Environment, action: Action) -> None:
             pass
+
+    def _mt_analyse(self, env: Environment, action: Action) -> None:
+        if not self.scene_config.method:
+            raise RuntimeError("No method specified.")
+        pass

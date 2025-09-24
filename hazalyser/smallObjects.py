@@ -6,7 +6,7 @@ from typing import Dict, List
 
 import numpy as np
 
-from hazalyser.utils import log
+from hazalyser.helpers import log
 from hazalyser.house import HazardRoom
 from hazalyser.objects import ObjectDB
 from legent.server.rect_placer import RectPlacer

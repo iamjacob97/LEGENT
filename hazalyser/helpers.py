@@ -1,10 +1,15 @@
 from typing import Dict, Any, Optional, Tuple, List
+import copy
+import json
 import os
 import trimesh
 import importlib.util
 
-from hazalyser.utils import convert_vector
+from dotenv import load_dotenv
 from legent.environment.env import Environment, Action 
+from legent.scene_generation.types import Vector3
+from legent.action.api import GetSpatialRelations
+
 
 package_name = "legent"
 package_path = importlib.util.find_spec(package_name).submodule_search_locations[0]
@@ -15,20 +20,10 @@ resource_path = os.path.abspath(resource_path)
 
 AGENT_PATH = os.path.join(resource_path, "obsAssets", "agent")
 SUBJECT_PATH = os.path.join(resource_path, "obsAssets", "subject")
+FRAMEWORKS_PATH = os.path.join(resource_path, "frameworks")
 LLM_ANALYSIS_PATH = os.path.join(resource_path, "llm_analysis")
 
-class SceneBundle:
-    def __init__(self, scene_generator, infos, max_floor_objects, 
-    spawnable_asset_groups, spawnable_assets, specified_object_types, 
-    max_object_types_per_room, hidden_object_indices = None):
-        self.generator = scene_generator
-        self.infos = infos
-        self.max_floor_objects = max_floor_objects
-        self.spawnable_asset_groups = spawnable_asset_groups
-        self.spawnable_assets = spawnable_assets
-        self.specified_object_types = specified_object_types
-        self.max_object_types_per_room = max_object_types_per_room
-        self._hidden_object_indices = hidden_object_indices or []
+load_dotenv()
 
 def get_mesh_size(input_file):
     """Get the bounding box of a mesh file.
@@ -44,6 +39,14 @@ def get_mesh_size(input_file):
 def get_current_scene_state(env: Environment, action: Action = Action()) -> Dict[str, Any]:
     obs = env.step(action)
     return obs.game_states
+
+def get_spatial_relations(env: Environment, action: Action = Action()):
+    action.text = ""
+    action.api_calls = [GetSpatialRelations()]
+    obs = env.step(action)
+    action.api_calls = []
+    object_relations = obs.api_returns.get("object_relations", [])
+    return object_relations
 
 def update_position_and_rotation(scene: Dict[str, Any], game_states: Dict[str, Any]) -> None:
     keys = {"instances", "player", "agent"}
@@ -82,4 +85,40 @@ def matches(odb, inst: Dict[str, Any], name: str) -> bool:
         return True
     otype = odb.OBJECT_TO_TYPE.get(inst["prefab"], "").lower()
     return otype == key
+
+def get_env_key(name:str) -> dict:
+    raw = os.environ.get(name)
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Env var {name} is not valid JSON: {e}") from e
+
+def load_framework_prompt(scene_config) -> dict:
+    name = scene_config.framework.strip()
+    name = name.lower()
+    if not name:
+        raise ValueError("framework must be a non-empty string")
+    
+    path = os.path.join(FRAMEWORKS_PATH, f"{name}.json")
+    if not path.exists():
+        raise FileNotFoundError("Framework JSON not found.")
+    
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def convert_vector(position_or_rotation: Vector3):
+    x = position_or_rotation["x"]
+    y = position_or_rotation["y"]
+    z = position_or_rotation["z"]
+    return (x, y, z)
+
+def deepcopy_scene(scene: Dict[str, Any]) -> Dict[str, Any]:
+    return copy.deepcopy(scene)
+
+def log(*args, **kwargs):
+    pass
+
+
 

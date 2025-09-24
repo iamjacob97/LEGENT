@@ -6,8 +6,7 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Any
 
-from hazalyser.helpers import SUBJECT_PATH, SceneBundle, get_mesh_size
-from hazalyser.utils import log, convert_vector
+from hazalyser.helpers import SUBJECT_PATH, get_mesh_size, convert_vector, log
 from hazalyser.house import HazardRoom, HazardRoomSpec, HazardHouse, generate_house_structure
 from hazalyser.objects import ObjectDB, get_default_object_db
 from hazalyser.smallObjects import add_small_objects
@@ -24,14 +23,37 @@ class SceneConfig:
     room_spec: HazardRoomSpec = HazardRoomSpec(room_spec_id="ESHA-SingleRoom", 
                                                spec=HazardRoom(room_id=1, 
                                                room_type=random.choice(["Bedroom", "LivingRoom", "Kitchen", "Bathroom"])))
-    dims: Tuple[int, int] = None # (x_size, z_size) in cell units
+    dims: Optional[Tuple[int, int]] = None # (x_size, z_size) in cell units
+    agent: Optional[str] = None
+    agent_scale: Optional[Tuple] = (1, 1, 1)
+    agent_info: Optional[str] = ""
     subject: Optional[str] = None 
     subject_scale: Optional[Tuple] = (1, 1, 1)
     subject_info: Optional[str] = ""
+    task: Optional[str] = ""
     items: Optional[Dict[str, int]] = None  # user-specified dictionary; keys are LEGENT types (e.g., "orange", "table")
-    framework: Optional[str] = "esha"
+    framework: Optional[str] = ""
     method: Optional[str] = ""
-    analysis_folder: str = "scene_analysis"
+    llm_key: Optional[str] = ""
+    vision_support: bool = False
+    temperature: int = None
+    max_tokens: int = None
+    analysis_folder: str = "analysis"
+
+class SceneBundle:
+    def __init__(self, scene_generator, infos, max_floor_objects, 
+    spawnable_asset_groups, spawnable_assets, specified_object_types, 
+    max_object_types_per_room, hidden_object_indices = None):
+        self.generator = scene_generator
+        self.infos = infos
+        self.max_floor_objects = max_floor_objects
+        self.spawnable_asset_groups = spawnable_asset_groups
+        self.spawnable_assets = spawnable_assets
+        self.specified_object_types = specified_object_types
+        self.max_object_types_per_room = max_object_types_per_room
+        self._hidden_object_indices = hidden_object_indices or []
+        self.clutter_level = 0
+        self.spacing_level = 0
 
 DEFAULT_UNIT_SIZE = 2.5
 DEFAULT_FLOOR_SIZE = 2.5
