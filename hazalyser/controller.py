@@ -1,11 +1,14 @@
-from collections import defaultdict
 import os
 import random
 import re
+from datetime import datetime
+from collections import defaultdict
+from dotenv import dotenv_values
 
-from hazalyser.helpers import LLM_ANALYSIS_PATH, get_current_scene_state, get_mesh_size, get_spatial_relations, is_small_object_instance, is_subject, update_position_and_rotation, deepcopy_scene
+from hazalyser.helpers import ENV_VARS_PATH, LLM_ANALYSIS_PATH, get_current_scene_state, get_env_key, get_mesh_size, get_spatial_relations, is_small_object_instance, is_subject, update_position_and_rotation, deepcopy_scene
 from hazalyser.smallObjects import add_small_objects
 from hazalyser.generator import SceneConfig, SceneBundle, SceneGenerator
+from hazalyser.prompter import Prompter
 from legent import Environment, ResetInfo, Action
 from legent.action.api import HideObject, SaveTopDownView, ShowObject, TakePhoto
 from legent.server.rect_placer import RectPlacer
@@ -39,7 +42,6 @@ class Controller:
             "#CLUTTER-": self._decrease_clutter,
             "#SPACING+": self._increase_spacing,
             "#SPACING-": self._decrease_spacing,
-            "#SAVEINFO": self._save_info,
             "#FWANALYSE": self._fw_analyse,
             "#MTANALYSE": self._mt_analyse
 
@@ -456,8 +458,10 @@ class Controller:
             action.text = "No locked scene. Cannot decrease spacing."
             env.step(action)
             return
-        self._resize_room(env, action, delta_cells=(-1,-1))
-        self._locked_scene_bundle.spacing_level -= 1
+        old_x, old_z, new_x, new_z = self._resize_room(env, action, delta_cells=(-1,-1))
+
+        if not (old_x == new_x and old_z == new_z):
+            self._locked_scene_bundle.spacing_level -= 1
 
     def _get_house_dimensions(self, unit_size):
         min_x, min_z, max_x, max_z = self._locked_scene_bundle.generator.placer.bbox
@@ -685,50 +689,95 @@ class Controller:
         action.text = f"Spacing updated: furniture kept {kept}, dropped {dropped_furniture}, small objects {len(small_object_instances)}."
         env.step(action)
 
-    def _save_perspectives(self, save_path: str, env: Environment, action: Action = Action(),
+        return (old_x_cells, old_z_cells, new_x_cells, new_z_cells)
+
+    def _save_perspectives(self, env: Environment, action: Action = Action(),
                         camera_height=1.7, width=4096, height=4096, vertical_field_of_view=60):
         """ Take snapshots from different perspectives """
-        min_x, min_z, max_x, max_z = self._locked_scene_bundle.generator.placer.bbox
+        scene_config = self.scene_config
+        analysis_folder = scene_config.analysis_folder
+        scene_info = self._locked_scene_bundle.infos
+        room_id = scene_info['room_polygon'][0]["room_id"]
+        room_type = scene_info['room_polygon'][0]['room_type']
+        clutter_level = self._locked_scene_bundle.clutter_level
+        spacing_level = self._locked_scene_bundle.spacing_level
+        timestamp = datetime.now().strftime("%d%m%Y_%H%M")
 
-        api_calls = [SaveTopDownView(os.path.join(save_path, "top.png"))]
+        save_folder = os.path.join(LLM_ANALYSIS_PATH, analysis_folder, f"{room_type}_{room_id}_{clutter_level}_{spacing_level}_{timestamp}")
+        os.makedirs(save_folder, exist_ok=True)
+        
+
+        action.text = ""
+        min_x, min_z, max_x, max_z = self._locked_scene_bundle.generator.placer.bbox
+        image_paths = []
+        top_view_path = f"{save_folder}/top.png"
+        api_calls = [SaveTopDownView(top_view_path)]
         action.api_calls = api_calls
         env.step(action)    
+        image_paths.append(top_view_path)
 
         rotations = [[0, 0, 0], [0, 90, 0], [0, 180, 0], [0, 270, 0]]
-
         positions = [[(max_x - min_x) / 2, camera_height, 0], [0, camera_height, (max_z - min_z) / 2],
                     [(max_x - min_x) / 2, camera_height, max_z], [max_x, camera_height, (max_z - min_z) / 2]]
 
         for i, (pos, rot) in enumerate(zip(positions, rotations)):
-            api_calls = [TakePhoto(f"{save_path}/side_{i}.png", pos, rot, width, height, vertical_field_of_view)]
+            side_view_path = f"{save_folder}/side_{i}.png"
+            api_calls = [TakePhoto(side_view_path, pos, rot, width, height, vertical_field_of_view)]
             action.api_calls = api_calls
             env.step(action)
+            image_paths.append(side_view_path)
         
         action.api_calls = []
+        images_to_send = self.scene_config.images.strip().lower()
+        if images_to_send == "top":
+            image_paths = image_paths[:1]
 
-    def _save_info(self, env: Environment, action: Action) -> None:
-        if not self._locked_scene_bundle:
-            action.text = "No scene locked. Cannot analyse"
-            env.step(action)
-        else:
-            scene_config = self.scene_config
-            analysis_folder = scene_config.analysis_folder
-
-            action.text = ""
-            save_path = os.path.join(LLM_ANALYSIS_PATH, analysis_folder, "perspectives")
-            os.makedirs(save_path, exist_ok=True)
-
-            self._save_perspectives(self, save_path, env, action)
-
-            action.api_calls = []
-
-            action.text = f"Scene info saved to {save_path}"
-            env.step(action)
+        return save_folder, image_paths
 
     def _fw_analyse(self, env: Environment, action: Action) -> None:
-            pass
+        # save all images for reference
+        if not self._locked_scene_bundle:
+            action.text = "No scene locked. Cannot analyse."
+            env.step(action)
+        elif not self.scene_config.framework:
+            action.text = "You need to specify the framework in the scene configuration"
+            env.step(action)
+        else:
+            object_db = self._locked_scene_bundle.generator.odb
+            scene_info = self._locked_scene_bundle.infos
+            current_state = get_current_scene_state(env, action)
+            update_position_and_rotation(scene_info, current_state)
+            object_relations = get_spatial_relations(env, action)
+            save_path, image_paths = self._save_perspectives(env, action)
+
+            llm_key = self.scene_config.llm_key.strip().lower()
+            llm_keys = []
+            if llm_key == "all":
+                env_vars = dotenv_values(ENV_VARS_PATH)
+                for llm_key in env_vars.keys():
+                    llm_keys.append(llm_key)
+            else:
+                llm_keys.append(llm_key)
+
+            for llm_key in llm_keys:
+                api_info = get_env_key(llm_key)
+                api_key = api_info.get("api_key", None)
+                base_url = api_info.get("base_url", None)
+                model_name = api_info.get("model_name", "")
+                vision_support = api_info.get("vision_support", False)
+                temperature = self.scene_config.temperature
+                max_tokens = self.scene_config.max_tokens
+
+                analyser = Prompter(self.scene_config, odb=object_db, api_key=api_key, base_url=base_url, model_name=model_name, vision_support=vision_support)
+                analyser.analyse(save_path, scene_info, object_relations, image_paths, temperature, max_tokens)
+
+                action.text = f"Analysis saved to {save_path}"
+                env.step(action)
 
     def _mt_analyse(self, env: Environment, action: Action) -> None:
-        if not self.scene_config.method:
+        if not self._locked_scene_bundle:
+            action.text = "No scene locked. Cannot analyse."
+        elif not self.scene_config.method:
             raise RuntimeError("No method specified.")
-        pass
+        else:
+            pass

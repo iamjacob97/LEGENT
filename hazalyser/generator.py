@@ -35,9 +35,9 @@ class SceneConfig:
     framework: Optional[str] = ""
     method: Optional[str] = ""
     llm_key: Optional[str] = ""
-    vision_support: bool = False
-    temperature: int = None
-    max_tokens: int = None
+    images: Optional[str] = "all"
+    temperature: Optional[int] = 0.2
+    max_tokens: Optional[int] = None
     analysis_folder: str = "analysis"
 
 class SceneBundle:

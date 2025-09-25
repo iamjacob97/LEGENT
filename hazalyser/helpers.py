@@ -1,9 +1,10 @@
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Dict, Any
 import copy
 import json
 import os
 import trimesh
 import importlib.util
+from pathlib import Path
 
 from dotenv import load_dotenv
 from legent.environment.env import Environment, Action 
@@ -22,6 +23,8 @@ AGENT_PATH = os.path.join(resource_path, "obsAssets", "agent")
 SUBJECT_PATH = os.path.join(resource_path, "obsAssets", "subject")
 FRAMEWORKS_PATH = os.path.join(resource_path, "frameworks")
 LLM_ANALYSIS_PATH = os.path.join(resource_path, "llm_analysis")
+env_path = os.path.join(package_path, os.pardir, ".env")
+ENV_VARS_PATH = os.path.abspath(env_path)
 
 load_dotenv()
 
@@ -37,6 +40,7 @@ def get_mesh_size(input_file):
     return max_vals - min_vals
     
 def get_current_scene_state(env: Environment, action: Action = Action()) -> Dict[str, Any]:
+    action.text = ""
     obs = env.step(action)
     return obs.game_states
 
@@ -101,7 +105,7 @@ def load_framework_prompt(scene_config) -> dict:
     if not name:
         raise ValueError("framework must be a non-empty string")
     
-    path = os.path.join(FRAMEWORKS_PATH, f"{name}.json")
+    path = Path(FRAMEWORKS_PATH)/f"{name}.json"
     if not path.exists():
         raise FileNotFoundError("Framework JSON not found.")
     

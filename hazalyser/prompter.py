@@ -1,6 +1,8 @@
 import base64
 import json
 import os
+import re
+import copy
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -29,17 +31,19 @@ class _OpenAIAdapter:
             self.client = _openai.OpenAI()
 
     def chat(self, model: str, messages: List[Dict[str, Any]], **kwargs: Any) -> str:
+        print(f"{model} analysis underway, awaiting response")
         response = self.client.chat.completions.create(model=model, messages=messages, **kwargs)
         content = response.choices[0].message.content or ""
         usage = response.usage
         return content, usage
 
 class Prompter:
-    def __init__(self, scene_config, api_key: Optional[str] = None, base_url: Optional[str] = None, 
-                model_name: str = "", vision_model: bool= False) -> None:
-        self.odb: ObjectDB = get_default_object_db()
+    def __init__(self, scene_config, odb = get_default_object_db(), api_key: Optional[str] = None, base_url: Optional[str] = None,
+                 model_name: str = "", vision_support: bool = False) -> None:
+        self.odb: ObjectDB = odb
         self.scene_config = scene_config
         self.model_name = model_name
+        self.vision_support = vision_support
 
         self._llm: Optional[_OpenAIAdapter] = None
         if _OPENAI_AVAILABLE:
@@ -49,18 +53,20 @@ class Prompter:
                 raise RuntimeError(f"LLM Adapter not properly initialized: {e}")
     # ------------------------------ Public API ------------------------------ #
 
-    def analyze(self, save_path, scene_info: Dict[str, Any], spatial_ralations, images: Optional[Sequence[str]] = None, 
+    def analyse(self, save_path, scene_info: Dict[str, Any], spatial_ralations, images: Optional[Sequence[str]] = None, 
                 temperature: float = 0.2, max_output_tokens: int = None):
 
         parsed = self._parse_scene(scene_info, spatial_ralations)
         metrics = self._compute_scene_metrics(parsed)
         prompt_blocks = self._build_prompt(parsed, metrics)
 
-        messages = self._build_messages(prompt_blocks, images)
+        messages = self._build_messages(prompt_blocks, images, save_path)
         output, usage = self._llm.chat(model=self.model_name, messages=messages,
                                        temperature=temperature, max_tokens=max_output_tokens)
         
-        self._save_llm_output(output, usage, save_path, temperature, max_output_tokens)
+        self._save_llm_output(save_path, output, usage, temperature, max_output_tokens)
+
+        return
         
     # ----------------------------- Scene Parsing ---------------------------- #
 
@@ -73,7 +79,7 @@ class Prompter:
           - agent: Dict
           - center: [x,y,z]
         """
-        instances: List[Dict[str, Any]] = scene_info.get("instances", [])
+        instances: List[Dict[str, Any]] = copy.deepcopy(scene_info.get("instances", []))
         room: List[Dict[str, Any]] = scene_info.get("room_polygon", [])
         player = scene_info.get("player", {})
         agent = scene_info.get("agent", {})
@@ -145,7 +151,7 @@ class Prompter:
         for instance in instances:
             if is_small_object_instance(instance):
                 movable_count += 1
-            elif instance not in walls_and_floors and not is_subject(instance, self.scene_config.subject):
+            elif instance["prefab"] not in walls_and_floors and not is_subject(instance, self.scene_config.subject):
                 receptacle_count += 1
         clutter_density = self._safe_div(len(instances), area)
 
@@ -188,15 +194,17 @@ class Prompter:
         if scene_config.agent_info or scene_config.subject_info or scene_config.task:
             extra_context = f"agent_info: {scene_config.agent_info}, subject_info: {scene_config.subject_info}, task_info: {scene_config.task}"
             user_instructions += f"\nExtra context: {extra_context}"
-
-        return {
+        
+        prompt = {
             "system": system_preamble,
             "guide": guide,
             "scene": scene_json,
             "user": user_instructions,
         }
+        return prompt
 
-    def _build_messages(self, prompt: Dict[str, Any], images: Optional[Sequence[str]]) -> List[Dict[str, Any]]:
+    def _build_messages(self, prompt: Dict[str, Any], images: Optional[Sequence[str]], save_path: str) -> List[Dict[str, Any]]:
+        scene_config = self.scene_config
         messages: List[Dict[str, Any]] = [
             {"role": "system", "content": [{"type": "text", "text": prompt["system"]}]},
             {"role": "user", "content": [{"type": "text", "text": prompt["guide"]}]},
@@ -205,9 +213,8 @@ class Prompter:
             {"role": "user", "content": [{"type": "text", "text": prompt["user"]}]},
         ]
 
-        if self.scene_config.vision_model and images:
-            # Attach up to 6 images to keep requests small
-            for image_path in list(images):
+        if self.vision_support:
+            for image_path in images:
                 try:
                     encoded = self._encode_image_file(image_path)
                     mime_type = "image/png"  # default
@@ -223,6 +230,15 @@ class Prompter:
                 except Exception:
                     # Skip unreadable image
                     continue
+        
+        timestamp = datetime.now().strftime("%d%m%Y_%H%M")
+        model = re.sub(r'[\\/:"*?<>|]+', "_", self.model_name)
+        fname =  f"{scene_config.framework}_{scene_config.llm_key}_{model}_request_{timestamp}.json"
+        request_file = os.path.join(save_path, fname)
+        with open(request_file, "w", encoding="utf-8") as f:
+            json.dump(messages, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+
         return messages
 
     def _encode_image_file(self, image_path: str) -> str:
@@ -234,11 +250,12 @@ class Prompter:
 
     # ------------------------------ Reporting ------------------------------- #
 
-    def _save_llm_output(self, output, usage, save_path, temperature, max_output_tokens):
+    def _save_llm_output(self, save_path, output, usage, temperature, max_output_tokens):
         scene_config = self.scene_config
         timestamp = datetime.now().strftime("%d%m%Y_%H%M")
-
-        analysis_file = os.path.join(save_path, f"{scene_config.framework}_{scene_config.llm_key}_{timestamp}.txt")
+        model = re.sub(r'[\\/:"*?<>|]+', "_", self.model_name)
+        fname = f"{scene_config.framework}_{scene_config.llm_key}_{model}_response_{timestamp}.txt"
+        analysis_file = os.path.join(save_path, fname)
         with open(analysis_file, "w", encoding="utf-8") as f:
             f.write("=== LLM OUTPUT ===\n")
             f.write(output)
@@ -249,4 +266,6 @@ class Prompter:
             f.write(f"Prompt tokens: {usage.prompt_tokens}")
             f.write(f"Completion tokens: {usage.completion_tokens}")
             f.write(f"Total tokens: {usage.total_tokens}")
+        print("respnonse saved")
+        return
             

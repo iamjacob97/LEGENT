@@ -1,0 +1,61 @@
+=== LLM OUTPUT ===
+**A) ESHA Worksheet**
+
+| Item | Category | Location | Interaction | Failure | Consequence | Inherent | Safeguard | Instruction | Severity | Likelihood | Risk |
+|-------|----------|----------|------------|---------|------------|----------|-----------|------------|----------|------------|------|
+| Walls (multiple) | Feature (Immovable) | Perimeter of room | Collision during navigation | Sensor failure/path planning error | Robot damage, subject injury if nearby | Smooth surfaces, rounded edges | Proximity sensors, soft bumper design, collision detection | Maintain safe distance from walls | 2 | 2 | 4 |
+| Floor surfaces | Feature (Surface) | Entire room area | Traversal, potential slipping | Low traction, uneven surfaces (none apparent) | Loss of stability, tip-over, dropped items | Flat, non-slip material | Traction control, slip detection, stability monitoring | Avoid high-speed turns on smooth surfaces | 2 | 1 | 2 |
+| Kitchen table (C2) | Object (3D Immovable) | (0.81, 0.40, 1.83) | Collision, leg entanglement | Navigation error, low clearance | Robot tip-over, damage to table/items | Stable structure | Height clearance checks, leg detection sensors | Navigate carefully around table legs | 3 | 2 | 6 |
+| Kitchen table (C3) | Object (3D Immovable) | (6.50, 0.40, 3.02) | Collision, leg entanglement | Navigation error, low clearance | Robot tip-over, damage to table/items | Stable structure | Height clearance checks, leg detection sensors | Navigate carefully around table legs | 3 | 2 | 6 |
+| Room table | Object (3D Immovable) | (0.75, 0.24, 6.95) | Collision, leg entanglement | Navigation error, low clearance | Robot tip-over, damage to table/items | Stable structure | Height clearance checks, leg detection sensors | Navigate carefully around table legs | 3 | 2 | 6 |
+| Wardrobe | Object (3D Immovable) | (9.69, 1.40, 4.85) | Collision during navigation | Path planning error | Robot damage, potential item dislodgement | Solid construction | Proximity sensors, obstacle avoidance | Maintain safe distance | 2 | 2 | 4 |
+| TV table | Object (3D Immovable) | (0.60, 0.23, 0.24) | Collision, potential tip-over | Navigation error | Robot damage, table tip-over, TV damage | Low center of gravity | Collision detection, gentle contact force | Avoid close approach | 3 | 2 | 6 |
+| Dresser | Object (3D Immovable) | (0.20, 0.45, 3.99) | Collision during navigation | Path planning error | Robot damage, potential item spillage | Stable design | Proximity sensors, careful path planning | Navigate with caution | 2 | 2 | 4 |
+| Bar | Object (3D Immovable) | (4.75, 0.57, 6.39) | Collision, leg entanglement | Navigation error | Robot tip-over, bar damage | Solid construction | Leg detection, clearance monitoring | Avoid narrow passages underneath | 3 | 2 | 6 |
+| Sofa | Object (3D Immovable) | (9.48, 0.54, 6.91) | Collision, potential entrapment | Navigation error | Robot stuck against soft surface, damage | Soft material | Contact detection, reversal protocols | Maintain distance from soft obstacles | 2 | 2 | 4 |
+| Cabinets (multiple) | Object (3D Immovable) | Various locations | Collision during navigation | Path planning error | Robot damage, cabinet damage | Solid construction | Proximity sensors, obstacle avoidance | Maintain safe distance | 2 | 2 | 4 |
+| Chairs (multiple) | Object (3D Movable) | Various locations | Collision, potential displacement | Navigation error, object detection failure | Chair movement creating obstacles, trip hazard | Lightweight but stable | Object tracking, force-limited contact | Approach chairs slowly, detect movement | 2 | 3 | 6 |
+| Floor lamps | Object (3D Movable) | (6.71, 0.79, 7.15) & (8.17, 0.79, 0.29) | Collision, potential tip-over | Navigation error | Lamp breakage, fire hazard, glass shards | Tall, narrow base | Stability detection, careful navigation | Avoid close approach, especially base | 4 | 2 | 8 |
+| Plant | Object (3D Movable) | (5.28, 0.38, 7.31) | Collision, soil spillage | Navigation error | Slippery floor, cleaning required, plant damage | Pot stability | Proximity sensors, avoid contact | Maintain distance from decorative items | 2 | 2 | 4 |
+| Small items (food, utensils) | Object (3D Movable) | Various surfaces | Collision, knocking items off surfaces | Manipulation error, navigation too close | Item breakage, spillage, slip hazard | Small, lightweight | Precise manipulation, safe distances | Handle items carefully, avoid crowded surfaces | 2 | 3 | 6 |
+| Laptop | Object (3D Movable) | (3.36, 0.64, 7.16) | Collision during manipulation | Gripping error, navigation error | Damage to expensive device, data loss | Fragile electronics | Careful manipulation protocols | Handle with extreme care | 3 | 2 | 6 |
+| TV | Object (3D Movable) | (1.84, 0.88, 0.09) | Collision, potential tip-over | Navigation error | Expensive damage, glass hazard | Heavy but top-heavy | Proximity sensors, no close approach | Maintain safe distance from electronics | 4 | 2 | 8 |
+| Kettle | Object (3D Movable) | (0.83, 0.82, 1.82) | Collision, hot liquid spill | Manipulation error | Burn hazard to subject/robot, slip hazard | Hot contents | Temperature sensing, secure grip | Verify cool before handling, secure grip | 4 | 2 | 8 |
+| Candle | Object (3D Movable) | (6.54, 0.88, 3.04) | Collision, fire hazard | Manipulation error | Fire outbreak, burn hazard | Open flame | Flame detection, avoid manipulation | Do not handle open flames | 5 | 1 | 5 |
+| Wine/Champagne bottles | Object (3D Movable) | Various locations | Collision, glass breakage | Manipulation error | Glass shards, slip hazard, liquid spill | Fragile glass | Secure grip protocols, careful navigation | Handle glass containers with extreme care | 3 | 2 | 6 |
+| Elderly subject (human agent) | Agent (Human) | (1.49, 0.92, 4.92) | Collision during approach | Navigation error, subject movement | Injury to subject (fragile), fall risk | Unpredictable movement | Human detection, safe distance keeping, predictive avoidance | Approach slowly, announce presence, maintain safe distance | 5 | 3 | 15 |
+| Subject's walking path | Dynamic hazard | Between subject & robot | Path crossing, unexpected movement | Poor prediction | Collision, fall risk for subject | Subject's mobility issues | Continuous tracking, path prediction | Monitor subject movement, yield right of way | 4 | 3 | 12 |
+| Clutter density | Feature (Ambient) | Entire room (1.104 items/m²) | Navigation obstruction | Path planning complexity | Entrapment, missed detection of small items | High density | Advanced obstacle detection, clutter mapping | Plan paths carefully, frequent scans | 2 | 4 | 8 |
+| Low-light areas | Feature (Ambient) | Room corners, under furniture | Reduced sensor reliability | Visual occlusion | Missed obstacles, navigation errors | Natural shadowing | Supplemental lighting, multi-sensor fusion | Operate with enhanced sensing in poor light | 3 | 2 | 6 |
+| Doorways (implied) | Feature (Terrain) | Room exits/entrances | Narrow passage negotiation | Size miscalculation | Entrapment, collision with frame | Standard width | Dimensional checks, careful maneuvering | Approach doorways centered, slow down | 2 | 2 | 4 |
+
+**B) Short Rationale**  
+The scene presents a typical indoor living space with high clutter density (1.104 items/m²) containing numerous immovable furniture pieces and movable objects. The primary hazard is interaction with the elderly human subject who has mobility and vision impairments, creating a high-risk scenario for collision. Secondary hazards include tip-over risks with tall objects (lamps, TV), breakage hazards with fragile items (glass, electronics), and spill hazards with liquids/containers. The candle presents a rare but severe fire hazard. The robot's medication delivery task requires careful navigation and manipulation in a constrained environment with potential dynamic obstacles.
+
+**C) Safety Requirements**  
+1. Implement human detection and tracking with minimum 1.5m safety distance
+2. Use force-limited manipulation for all object interactions
+3. Deploy multi-sensor fusion (vision, lidar, tactile) for clutter navigation
+4. Establish no-handling policy for open flames (candle)
+5. Implement thermal sensing for hot objects (kettle)
+6. Use predictive path planning for subject movement anticipation
+7. Implement glass/fragile object recognition and special handling protocols
+8. Ensure stability control systems for tip-over prevention
+9. Maintain continuous environmental mapping for obstacle detection
+10. Implement verbal announcement system when approaching subject
+
+**D) Coverage Report**  
+- Features: Complete (walls, floors, ambient conditions, doorways implied)
+- Objects: Complete coverage (immovable furniture, movable items, receptacles)
+- Agents: Complete (human subject present, robot agent present)
+- All ESHA classes addressed: Terrain areas/surfaces, ambient conditions, immovable objects, movable objects, non-agent moving objects (none in scene), human agents
+- Missing categories: No stairs, no animals, no autonomous robots besides assistive agent, no automatic agents
+
+**E) Residual Risk & SFAIRP**  
+Residual risk remains primarily in human-robot interaction (Risk=15) due to the subject's unpredictability and fragility. This is As Low As Reasonably Practicable (ALARP) through implemented safeguards (distance keeping, predictive tracking, verbal announcements). The fire hazard from candle (Risk=5) is eliminated by prohibition of interaction. Tip-over hazards (Risk=8) are reduced through stability control and careful navigation. The risk assessment shows that all severe hazards (Severity≥4) have been addressed with engineering controls (sensors, algorithms) and administrative controls (operating procedures), making the system SFAIRP-compliant for the described task and environment.
+
+=== USAGE DETAILS ===
+Model: deepseek/deepseek-chat-v3.1:free
+Temperature: 0.2
+Max tokens: None
+Prompt tokens: 14878Completion tokens: 2378Total tokens: 17256
