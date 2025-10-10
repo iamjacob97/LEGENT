@@ -1,0 +1,51 @@
+=== LLM OUTPUT ===
+**A) ESHA Worksheet**
+
+| Item | Category | Location | Interaction | Failure | Consequence | Inherent | Safeguard | Instruction | Severity | Likelihood | Risk |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Walls (LowPolyInterior2_Wall3_C9_01) | Feature (Immovable) | Perimeter of room | Collision during navigation | Sensor failure, path planning error | Robot damage, subject injury from debris/shock | Rounded edges, compliant materials | Obstacle detection (lidar), emergency stop | Maintain safe distance from walls | 3 | 2 | 6 |
+| Floor (LowPolyInterior2_Floor4_01) | Feature (Surface) | Entire room | Traversal, object drops | Slippery surface, uneven joints | Robot slip/tip, subject fall hazard from dropped objects | Non-slip texture, even surface | Traction control, stability monitoring | Clean spills immediately, secure loose rugs | 4 | 2 | 8 |
+| Kitchen Table (LowPolyInterior2_Table_04_C2, etc.) | Object (3D, Immovable) | Various positions | Navigation around, object retrieval | Collision, tip during object manipulation | Robot/table damage, subject injury from falling objects | Stable base design | Proximity sensors, careful arm motion planning | Avoid high-speed approaches | 3 | 3 | 9 |
+| Oven (LowPolyInterior_Oven) | Object (3D, Immovable) | (3.86, 0.46, 9.37) | Navigation near, potential heat source | Collision, thermal exposure | Burns to subject/robot, fire hazard | Insulated surfaces | Thermal sensors, maintain safe distance | Do not operate robot near active oven | 5 | 1 | 5 |
+| Refrigerator (LowPolyInterior2_Refrigerator2_C1) | Object (3D, Immovable) | (0.40, 0.90, 0.57) | Navigation near, door interaction | Collision, door entrapment | Entrapment hazard, damage | Smooth surfaces, auto-close mechanism | Force sensing on arms, detect open doors | Ensure clear path before opening | 3 | 2 | 6 |
+| Hob/Stovetop (LowPolyInterior2_Hob1_C2) | Object (3D, Immovable) | (4.68, 0.02, 4.01) | Navigation near, heat source | Collision, thermal exposure | Burns, fire hazard | Heat-resistant materials | Thermal sensors, avoid area when active | Keep robot away during cooking | 5 | 1 | 5 |
+| Washing Machine (LowPolyInterior2_Washer_01) | Object (3D, Immovable) | (2.85, 0.43, 0.47) & (6.83, 0.43, 9.64) | Navigation near, vibration source | Collision, instability from vibration | Tip-over, noise disturbance | Vibration damping | Detect operation status, avoid during spin cycle | Secure laundry before operation | 3 | 2 | 6 |
+| Chairs/Stools (Various chairs) | Object (3D, Movable) | Various positions | Collision, potential tip | Unstable if bumped, occlusion | Subject fall, robot entrapment, navigation failure | Weighted bases | Detect and classify chairs, avoid close approach | Keep chairs tucked in, clear paths | 4 | 3 | 12 |
+| Dishwasher (LowPolyInterior2_Dishwasher_01) | Object (3D, Immovable) | (5.18, 0.37, 6.10) | Navigation near, door interaction | Collision, entrapment | Pinch points, damage | Smooth edges | Force sensing, detect open state | Ensure door closed when not in use | 3 | 2 | 6 |
+| Small Objects (Food items, utensils) | Object (3D, Movable) | On tables/surfaces | Manipulation, potential drop | Slip from gripper, misplacement | Spills, breakage, slip hazard, subject choking | Secure surfaces | Precise grip control, tray use for transport | Handle fragile items carefully | 2 | 4 | 8 |
+| Hot Coffee (Cup) | Object (3D, Movable) | On counter (est.) | Retrieval and handover | Spill, incorrect temperature | Burns to subject, scalding | Insulated cup | Temperature check, stable grip, slow motion | Verify cup stability before handover | 5 | 3 | 15 |
+| Subject (Wheelchair-bound person) | Agent (Human) | (6.78, 0.66, 0.69) | Direct interaction, handover | Collision, incorrect handover force | Injury, fall from wheelchair, spill | Frail, limited mobility | Gentle touch detection, verbal cues, slow approach | Subject to remain seated during interaction | 5 | 3 | 15 |
+| Agent (Tiago Robot) | Agent (Autonomous Robot) | (8.62, 0.03, 7.66) | Self-navigation, operation | System failure, software error | Uncontrolled motion, task failure | Fault-tolerant design | Emergency stop, system health monitoring | Regular maintenance and checks | 4 | 2 | 8 |
+| Doorways (Implied by wall gaps) | Feature (Opening) | Between wall segments | Navigation through | Misjudgment of clearance | Entrapment, collision with frame | Standard width | Precise localization, size estimation | Approach doorways centered and slow | 3 | 2 | 6 |
+| Clutter (Multiple objects on surfaces) | Object (Clutter) | Various receptacles | Occlusion, navigation | Failed object detection, path blockage | Collision, task failure | Organized placement | Advanced perception, clutter mapping | Keep workspaces tidy | 3 | 3 | 9 |
+| Ambient Conditions (Heat, noise) | Feature (Ambient) | Room environment | Thermal, acoustic exposure | Sensor interference, discomfort | Reduced performance, distraction | Well-ventilated room | Monitor ambient conditions | Maintain comfortable room temperature | 2 | 1 | 2 |
+
+**B) Summary and Rationale for Identified Risks**
+
+The highest risks (Risk=15) involve direct interaction with the highly vulnerable subject and handling of hot liquids. A spill during coffee handover could cause severe burns, and any physical collision could lead to a fall or injury due to the subject's frailty. Chair-related hazards (Risk=12) are significant due to their mobility and potential to cause falls or entrapment. General navigation among clutter and immovable objects presents moderate risks (6-9), mitigated by robust sensing but ever-present due to the confined kitchen environment.
+
+**C) Safety Requirements**
+
+1.  The robot must perform a temperature check on any liquid container before attempted handover.
+2.  A forced-reduced speed zone must be established within a 1.5m radius of the subject.
+3.  Object manipulation motions near the subject must be pre-computed for minimal jerk and maximum stability.
+4.  The robot's navigation system must classify and dynamically update the positions of all movable objects (chairs).
+5.  A two-step verification (sensor + algorithm) must confirm a stable grip on the target cup before lifting.
+6.  The system must include a clear, immediate verbal and auditory emergency stop signal usable by the subject.
+
+**D) Coverage Report**
+
+*   **Features:** Terrain (floor), surfaces (tables), openings (doorways), and ambient conditions covered. No stairs, water bodies, or extreme ambient hazards present.
+*   **Objects:** 0D/1D (Absent), 2D (Absent), 3D (Covered: Immovable appliances, movable chairs/food items). Non-agent moving objects absent.
+*   **Agents:** Autonomous robot (Covered), Human (Covered - subject). Automatic agents and animals absent.
+*   **ESHA Classes:** All applicable classes for an indoor kitchen scene are addressed. The analysis is exhaustive for the provided scene elements.
+
+**E) Residual Risk & SFAIRP**
+
+Residual risk is deemed As Low As Reasonably Practicable (ALARP). The identified high-severity risks (subject interaction, hot liquid handling) are mitigated by specific, verifiable technical and procedural safeguards (temperature checks, reduced speed zones, stable grip verification). The likelihood of these high-consequence events is reduced to a level where the cost or effort to reduce it further would be grossly disproportionate to the minimal risk reduction achieved. The remaining moderate and low risks are controlled to a level acceptable for the intended assistive operation in a domestic environment.
+
+=== USAGE DETAILS ===
+Model: deepseek/deepseek-chat-v3.1:free
+Temperature: 0.2
+Max tokens: None
+Prompt tokens: 18069Completion tokens: 1849Total tokens: 19918

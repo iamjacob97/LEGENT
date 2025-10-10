@@ -76,7 +76,7 @@ ObjectDB     ->  SceneGenerator.generate()
                 |-> assemble infos -> SceneBundle
 ```
 
-## Comparison with Hazalyser SceneGenerator
+## Comparison with core LEGENT SceneGenerator
 - **Room Scope**: Core LEGENT supports multi-room houses with door connectivity; `hazalyser.SceneGenerator` targets a single user-specified room without door carving and pads the floorplan manually.
 - **Outputs**: Core returns a raw `infos` dict (plus debug file). Hazalyser wraps the payload in `SceneBundle`, exposing clutter/spacing counters and spawnable pools for downstream interactive editing.
 - **Configuration Surface**: Hazalyser introduces `SceneConfig` to capture analysis metadata (framework, subject, temperature) and routes subject placement through `add_player_agent_subject`. Core LEGENT operates on `RoomSpec` and external object count overrides without awareness of hazard-analysis parameters.

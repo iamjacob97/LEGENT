@@ -1,0 +1,53 @@
+=== LLM OUTPUT ===
+**A) ESHA Worksheet**
+
+| Item | Category | Location | Interaction | Failure | Consequence | Inherent | Safeguard | Instruction | Severity | Likelihood | Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Walls (all) | Feature (Immovable) | Perimeter | Navigation | Collision | Robot damage, subject distress | Rigid structure | Proximity sensors, collision detection | Maintain safe distance | 3 | 2 | 6 |
+| Floor | Feature (Surface) | Entire area | Navigation | Slippage (carpet edges) | Robot instability, fall | Flat surface | Traction control, slip detection | Avoid high-speed turns on rugs | 2 | 3 | 6 |
+| Wheelchair-bound Subject | Agent (Human) | (1.01, 0.66, 4.50) | Proximity, object transfer | Collision, incorrect handover | Injury, fall, mission failure | Vulnerable user | Low-speed approach, careful path planning, compliant control | Prioritize subject safety, slow deliberate motions | 5 | 3 | 15 |
+| Tiago Robot (self) | Agent (Autonomous Robot) | (8.77, 0.03, 4.98) | Self-navigation, manipulation | System fault, planning error | Task failure, unintended interaction | Complex system | System redundancy, fail-safes, emergency stop | Regular maintenance, system checks | 4 | 2 | 8 |
+| Chairs (various) | Object (3D Movable) | Multiple locations | Navigation, potential contact | Obstruction, potential tipping | Blocked path, object damage, noise | Lightweight, tippable | Object recognition, path re-planning | Navigate carefully around furniture | 2 | 4 | 8 |
+| Tables (various) | Object (3D Immovable) | Multiple locations | Navigation, manipulation (retrieval) | Collision, failed grasp | Robot damage, object spill/break | Solid structure | Proximity sensing, precise manipulation | Approach tables squarely for manipulation | 3 | 3 | 9 |
+| Sofas | Object (3D Immovable) | (0.50, 0.43, 8.76); (9.11, 0.43, 2.59) | Navigation | Collision, entrapment (against wall) | Robot damage, path blockage | Large, soft edges | Wide berth planning, sensor coverage | Avoid navigating in tight space behind sofas | 3 | 2 | 6 |
+| Wardrobes / Cabinets | Object (3D Immovable) | Multiple locations | Navigation | Collision | Robot damage | Solid structure | Proximity sensing | Maintain distance from large furniture | 3 | 2 | 6 |
+| Floor Lamps | Object (3D Movable/Tippable) | Multiple locations | Navigation | Collision, tipping | Breakage, potential fire/electrical hazard | Tall, narrow base | Careful path planning, object stability detection | Avoid close proximity to lamps | 3 | 3 | 9 |
+| TV | Object (3D Immovable) | (7.93, 0.83, 1.51) | Navigation | Collision | Damage to expensive device | Fragile screen | High-fidelity obstacle avoidance | Exercise extreme caution near display | 4 | 2 | 8 |
+| Small Objects (bottle, fruits, etc.) | Object (3D Movable) | On surfaces | Navigation (potential fall), manipulation | Knocked over, failed grasp | Spills, breakage, clutter creation | Small, unstable | Careful arm motion, secure grasping | Handle delicate objects with precision | 2 | 4 | 8 |
+| Carpet/Rug | Feature (Surface) | (6.93, 0.01, 6.09); (6.01, 0.00, 1.06) | Navigation | Traction loss, edge catching | Robot slip, entrapment | Low pile, edges | Traction control, rug edge detection | Cross rugs slowly and perpendicularly | 2 | 3 | 6 |
+| Fireplace | Object (3D Immovable) | (3.34, 0.48, 7.36) | Navigation | Collision | Robot damage, potential thermal hazard if active | Hard, sharp edges | Maintain safe distance | Treat as a high-priority obstacle | 3 | 2 | 6 |
+| Doorways (implied by layout) | Feature (Aperture) | Between wall segments | Navigation | Misjudgment of clearance | Entrapment, collision | Constricted space | Dimensional awareness, careful path planning | Center robot in doorways, move slowly | 3 | 3 | 9 |
+| Clutter (dense objects) | Object (0D/3D Movable) | On tables, wardrobes | Navigation, manipulation | Increased collision risk, failed object isolation | Task failure, object dispersal | High density | Enhanced perception, deliberate motion | Plan paths to avoid cluttered areas if possible | 2 | 4 | 8 |
+| Coffee Machine | Object (3D Immovable) | (4.68, 1.11, 6.01) | Manipulation (nearby) | Accidental activation, spill | Scald hazard, liquid damage | Contains hot liquid | Avoid interaction unless required by task | Do not interact with coffee machine | 3 | 1 | 3 |
+| Candles | Object (3D Movable/Tippable) | Multiple locations | Navigation, air current interaction | Tipping, ignition source | Fire hazard | Open flame, tippable | Strict no-go zone, avoid creating drafts | Maintain significant distance from all candles | 5 | 2 | 10 |
+| Medicines (Target Object) | Object (3D Movable) | On coffee table (implied) | Manipulation (grasp, carry) | Misidentification, dropped transfer | Mission failure, subject health risk | Critical item | Secure grasp verification, stable transport | Ensure positive grip before moving | 4 | 3 | 12 |
+
+**B) Summary and Rationale for Identified Risks**
+
+The highest risk (15) involves interaction with the vulnerable subject, where a collision or failed handover could cause physical harm. Significant risks (12, 10) are associated with the mission-critical medicine (dropping it) and open-flame candles (fire hazard). Moderate risks (9, 9, 9, 8, 8, 8) stem from navigating constricted doorways, potential tipping of floor lamps and chairs, colliding with tables or the TV, and interacting with numerous small, cluttered objects which could be knocked over. The environment is densely furnished, increasing the likelihood of navigation and manipulation failures. The subject's frailty and the presence of hazards like candles elevate the severity of many potential failures.
+
+**C) Safety Requirements**
+
+1.  The robot must maintain a minimum safe distance (e.g., 0.5m) from the subject at all times unless performing a controlled assistive task.
+2.  The robot must implement a strict no-go zone (e.g., 1.5m radius) around any identified open flame (candles).
+3.  Object manipulation policies must require positive grasp verification before lifting any object, especially the target medicine packet.
+4.  Navigation must prioritize paths that avoid close proximity to tippable objects (lamps, chairs) and cluttered surfaces.
+5.  The robot's maximum operational speed must be reduced in this cluttered indoor environment and near the subject.
+6.  The system must be able to detect and compensate for low-traction surfaces (rugs/carpets).
+7.  All object handovers to the subject must be performed at a predefined, safe, and stable location relative to the subject's wheelchair.
+
+**D) Coverage Report**
+
+*   **Features:** Terrain (Floor - covered), Surfaces (Carpet - covered), Apertures (Doorways - covered). Ambient features (lighting, temperature) are not described in the scene data and are assumed constant/benign. Other features (stairs) are absent.
+*   **Objects:** 0D/1D/2D objects are largely absent or incorporated into 3D object analysis. 3D Objects: Immovable (Walls, Tables, Sofas, Wardrobes, Fireplace, TV - covered), Movable (Chairs - covered), Non-Agent Moving (Absent). Numerous small, movable objects are covered under a collective "Small Objects" and "Clutter" hazard.
+*   **Agents:** Automatic (Absent), Autonomous Robot (Self - covered), Animals (Absent), Humans (Subject - covered, Player agent present but role undefined, treated as potential dynamic obstacle but risk not separately assessed due to lack of mission interaction context).
+
+**E) Residual Risk & SFAIRP**
+
+Residual risk is deemed As Low As Reasonably Practicable (ALARP/SFAIRP). The identified high and significant risks (subject interaction, medicine handling, candles) are mitigated by specific, stringent safety requirements (safe distances, no-go zones, verification steps). Moderate risks from navigation among clutter and furniture are mitigated by robust perception, careful path planning, and reduced speed. The remaining risk is primarily associated with unforeseen software errors or highly improbable simultaneous failures of redundant systems. Further risk reduction would require impractical measures like removing all furniture or the subject from the environment, which is not reasonably practicable for an assistive task in a home setting. The proposed mitigations are proportionate to the severity and likelihood of the identified hazards.
+
+=== USAGE DETAILS ===
+Model: deepseek/deepseek-chat-v3.1:free
+Temperature: 0.2
+Max tokens: None
+Prompt tokens: 19949Completion tokens: 2052Total tokens: 22001

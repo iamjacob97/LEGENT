@@ -208,7 +208,7 @@ class Prompter:
         messages: List[Dict[str, Any]] = [
             {"role": "system", "content": [{"type": "text", "text": prompt["system"]}]},
             {"role": "user", "content": [{"type": "text", "text": prompt["guide"]}]},
-            {"role": "user", "content": [{"type": "text", "text": "Scene Summary:"}]},
+            {"role": "user", "content": [{"type": "text", "text": "Scene Information:"}]},
             {"role": "user", "content": [{"type": "text", "text": prompt["scene"]}]},
             {"role": "user", "content": [{"type": "text", "text": prompt["user"]}]},
         ]

@@ -1,0 +1,72 @@
+# A) ESHA Worksheet
+
+| Item                                                   | Category                        | Location                 | Interaction                          | Failure                                    | Consequence                                           | Inherent                           | Safeguard                            | Instruction                                | Severity | Likelihood | Risk |
+| ------------------------------------------------------ | ------------------------------- | ------------------------ | ------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ---------------------------------- | ------------------------------------ | ------------------------------------------ | -------- | ---------- | ---- |
+| Flooring (wood)                                        | Feature: terrain surface        | Entire kitchen           | Robot and wheelchair traverse        | Slip or loss of traction on smooth surface | Collision, tip, or uncontrolled movement near subject | Rubberized wheels, low-speed drive | Slippage detection & auto-stop       | Keep floor dry, clear spills immediately   | 4        | 2          | 8    |
+| Walls and corners                                      | Feature: immovable              | Room perimeter           | Robot navigates close to edges       | Pose drift, collision                      | Bump redirects robot into subject or furniture        | Omnidirectional base, bumpers      | Lidar clearance inflation            | Maintain ≥0.5 m corridor clearance         | 3        | 2          | 6    |
+| Ambient lighting                                       | Feature: ambient                | Ceiling, general         | Light variation affects robot vision | Depth camera misestimation                 | Misalignment during grasp/handover                    | Lidar fusion fallback              | Robot task-light                     | Maintain adequate illumination             | 3        | 2          | 6    |
+| Kitchen counters & tables                              | Object: 3D immovable            | Perimeter, center        | Robot navigates and manipulates      | Collision, occlusion                       | Robot blocked, subject startled                       | Base torque limits                 | Workspace geofences                  | Keep pathways clear                        | 3        | 2          | 6    |
+| Chairs and stool                                       | Object: 3D movable              | Scattered in room        | Drift, occlusion of path             | Unexpected obstacle                        | Minor collision, trip hazard                          | Bump-stop, compliant base          | Pre-task reposition chairs           | Push chairs against wall before task       | 2        | 3          | 6    |
+| Coffee cup (hot)                                       | Object: 3D small hazardous      | On counter               | Robot grasps, transports, hands over | Spill or drop                              | Burns to frail subject, slip hazard                   | Force-limited grippers             | Tactile sensing, temperature check   | Use cup holder or tray; low-speed delivery | 5        | 3          | 15   |
+| Food items (pie, shrimp, pepper, lemon, carrot, donut) | Object: 3D movable small        | On tables                | Occlusion during grasp or navigation | Knocked, fall to floor                     | Slip hazard, contamination                            | Limited arm workspace              | Vision-based clutter detection       | Clear workspace before task                | 2        | 3          | 6    |
+| Plants & vase                                          | Object: 3D fragile              | Corners, near appliances | Knocked during navigation            | Pot falls, spill                           | Slip hazard, startle subject                          | Low-speed compliant base           | Collision detection                  | Relocate fragile items                     | 2        | 2          | 4    |
+| Oven, hob, hood                                        | Object: 3D immovable electrical | Kitchen wall             | Robot passes by                      | Contact or heat exposure                   | Burn risk, collision damage                           | Robot keeps clearance              | No-go zones for hot surfaces         | Keep oven/hob off during assistive tasks   | 5        | 2          | 10   |
+| Washing machine, refrigerator                          | Object: 3D immovable            | Perimeter                | Background occlusion, collision      | Minor bump                                 | Startle, obstruction                                  | Large visible surfaces             | Lidar mapping                        | Keep clearance around appliances           | 2        | 2          | 4    |
+| Trash bin                                              | Object: 3D movable              | Near wall                | Tip over during nav                  | Spill                                      | Slip hazard                                           | Stable base design                 | Obstacle avoidance                   | Position bin against wall                  | 2        | 2          | 4    |
+| Robot (Tiago)                                          | Agent: autonomous robot         | Mid-room                 | Navigates, manipulates, handover     | Force-control or navigation fault          | Drop hot cup, collision with subject                  | Torque-limited base/arms           | Watchdogs, redundant sensors, E-stop | Caregiver standby with E-stop              | 5        | 2          | 10   |
+| Subject (elderly woman in wheelchair)                  | Agent: human                    | Near wall                | Receives handover                    | Spill, collision, misplacement             | Burns, fracture, fall, skin injury                    | Padded grippers, low-speed         | Tactile & voice-cue handover         | Place cup on stable tray near subject      | 5        | 3          | 15   |
+| Caregiver/bystander                                    | Agent: human                    | Perimeter                | Moves unexpectedly                   | Step into robot path                       | Minor collision                                       | ISO 15066 force limits             | Slow navigation near humans          | Robot announces actions                    | 3        | 2          | 6    |
+
+---
+
+# B) Summary and rationale
+
+The highest risks arise from **handover of the hot coffee cup (Risk 15)** and **direct interaction with the frail subject (Risk 15)**, where even minor failures can result in severe burns or falls. Other notable risks include **heat sources (oven/hob, Risk 10)**, **robot control faults (Risk 10)**, and **movable clutter (chairs, small food items, Risk 6)**. Fragile objects (plants, vase) and bins present low to moderate risks but can escalate if they create slip hazards.
+
+---
+
+# C) Safety requirements
+
+1. **Environment preparation**
+
+   * Remove or relocate fragile items, small clutter, and chairs away from paths.
+   * Position bin against wall and extinguish hot appliances before assistive task.
+
+2. **Navigation and perception**
+
+   * Maintain ≥0.5 m clearance corridors near subject.
+   * Use lidar for reliable mapping, avoid occlusions from tables and clutter.
+   * Monitor ambient lighting, enable robot’s task-light.
+
+3. **Manipulation and handover**
+
+   * Transport hot cup in spill-proof holder or tray.
+   * Enforce low-speed delivery with padded grippers and tactile sensing.
+   * Place cup on stable surface near subject rather than directly in hand.
+
+4. **Human factors**
+
+   * Caregiver must supervise with E-stop access.
+   * Provide clear audio prompts before motion and during handover.
+
+5. **Operational governance**
+
+   * Pre-task checklist for floor clearance, clutter removal, appliance shutdown.
+   * Post-task logging of near-misses, cup handling errors, and environment conditions.
+
+---
+
+# D) Coverage report
+
+* **Features:** Floor, walls, ambient lighting.
+* **Objects:** 0D/fragile (plants, vase), 3D immovable (tables, oven, refrigerator, washer), 3D movable (chairs, stool, bin), small hazardous (hot cup).
+* **Agents:** Autonomous robot (Tiago), human subject (elderly woman), caregiver bystander.
+* **Absent:** No animals, no automatic agents, no doorways/stairs.
+
+---
+
+# E) Residual risk & SFAIRP
+
+Residual hazards remain in the inherently high-risk coffee handover task due to the subject’s frailty and hot liquid. Likelihood is reduced by using a spill-proof holder, low-speed control, and caregiver oversight. Burns and falls remain severe consequences, but mitigations reduce them to *as low as reasonably practicable*. Provided pre-task checklists, environmental preparation, and supervised handover are consistently applied, the residual package satisfies SFAIRP.
+
+---

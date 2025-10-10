@@ -1,0 +1,76 @@
+# A) ESHA Worksheet
+
+| Item                                   | Category                      | Location                | Interaction                                   | Failure                                        | Consequence                                | Inherent                                      | Safeguard                           | Instruction                                        | Severity | Likelihood | Risk |
+| -------------------------------------- | ----------------------------- | ----------------------- | --------------------------------------------- | ---------------------------------------------- | ------------------------------------------ | --------------------------------------------- | ----------------------------------- | -------------------------------------------------- | -------- | ---------- | ---- |
+| Walls and corners                      | Feature: immovable structure  | Room perimeter          | Robot navigates close to wall during approach | Pose drift, collision with wall                | Robot rebounds into subject or blocks path | Omnidirectional low-speed drive, bumpers      | Lidar-based clearance inflation     | Maintain ≥0.5 m clearance zone                     | 3        | 2          | 6    |
+| Wooden floor                           | Feature: terrain surface      | Entire room             | Wheelchair and robot base traverse            | Low traction during micro-movements            | Slip, tip or uncontrolled motion           | Rubberized robot wheels                       | Slippage detection & braking        | Ensure floor is dry and unobstructed               | 4        | 2          | 8    |
+| Carpet and bath mats                   | Feature: surface feature      | Near left and mid-floor | Robot/subject wheels snag or curl             | Abrupt stop, tip or jolt                       | Subject destabilization or fall            | Omnidirectional drive, compliant suspension   | Detect mats and replan              | Remove or tape mats before task                    | 4        | 3          | 12   |
+| Ambient lighting & lamps               | Feature: ambient              | Left and rear walls     | Affects robot’s cameras and depth sensors     | Misalignment in transfer trajectory            | Misplacement, skin shear or pinch          | Lidar fallback to depth                       | Robot task-light & exposure control | Maintain adequate lighting, turn off glare sources | 3        | 2          | 6    |
+| Bed frame & mattress                   | Object: 3D immovable          | Rear-right wall         | Target support surface for transfer           | Height mismatch, soft compliance               | Subject slides or falls                    | Force-controlled arms, pre-measure bed height | Contact sensors at edge             | Adjust bed height if adjustable                    | 5        | 2          | 10   |
+| Wheelchair (with subject)              | Object: 3D movable with locks | Bottom-right            | Primary transfer support                      | Brakes not locked, footrests in wrong position | Chair drifts during transfer → fall        | Robot verifies brake force state              | Force push test + vision check      | Caregiver locks brakes & stows footrests           | 5        | 3          | 15   |
+| Small side table (food/drinks)         | Object: 3D movable            | Mid-right               | Occludes transfer corridor                    | Not moved → collision/spill                    | Spillage → slip hazard, subject startled   | Robot collision stop                          | Pre-task removal routine            | Relocate table before task                         | 3        | 3          | 9    |
+| Football                               | Object: 3D non-agent moving   | Mid-floor               | Ball rolls under wheels                       | Base tip/skid                                  | Sudden subject destabilization             | Base skid-detection                           | Pre-task ball removal               | Keep floor toy-free                                | 4        | 3          | 12   |
+| PC chairs and stools                   | Object: 3D movable            | Scattered across room   | Castors drift into path                       | Unexpected collision                           | Startle or minor injury                    | Torque-limited bumper stops                   | Pre-task tidy & reposition chairs   | Park chairs against walls                          | 2        | 3          | 6    |
+| Dresser and drawers                    | Object: 3D immovable          | Rear-right beside bed   | Closes clearance for robot maneuver           | Robot edge collision                           | Bump redirects robot into subject          | Soft bumpers & compliant base                 | No-go geofence                      | Keep dresser ≥0.3 m clear of transfer zone         | 3        | 2          | 6    |
+| Candles                                | Object: 3D hazardous small    | Table, dresser          | Heat/open flame near subject                  | Spill or topple → fire risk                    | Burns, smoke                               | Robot heat detector disables transfer         | Task aborted if flame detected      | Extinguish candles pre-task                        | 4        | 2          | 8    |
+| Electronics (laptops, console, cables) | Object: 3D movable            | Sofa, desk              | Snag or occlusion during arm movement         | Device dragged, cable tension                  | Trip hazard or shock                       | Workspace limiters                            | Cable recognition                   | Remove/secure electronics                          | 3        | 2          | 6    |
+| Floor safes/boxes                      | Object: 3D immovable          | Along walls             | Low obstruction for wheels/feet               | Jam or pivot → tip                             | Ankle strike to subject                    | Base skirt sensors                            | Map low obstacles                   | Keep lanes clear                                   | 3        | 2          | 6    |
+| Robot (Tiago)                          | Agent: autonomous robot       | Near subject            | Provides lift & support                       | Force control or navigation fault              | Drop, collision, fracture                  | Torque & speed limits, E-stop                 | Redundant force monitors, watchdogs | Caregiver standby with E-stop                      | 5        | 2          | 10   |
+| Human caregiver                        | Agent: human                  | In room                 | May move into path                            | Collision with robot                           | Minor injury or startled subject           | ISO 15066 compliant force limits              | Slow nav near humans, audio cues    | Announce robot actions                             | 3        | 2          | 6    |
+| Subject (elderly woman)                | Agent: human                  | In wheelchair           | Direct recipient of transfer                  | Falls, misplacement, skin shear                | Severe injury, fracture                    | Padded grippers, compliant control            | Tactile sensing & voice cueing      | Use only harness points                            | 5        | 2          | 10   |
+
+---
+
+# B) Summary and rationale
+
+The highest risks occur at the wheelchair transfer interface (Risk 15), the rolling ball and carpet obstacles (Risks 12 each), and bed/robot misalignment during transfer (Risk 10). These combine high severity (frail subject, fall risk) with moderate likelihood due to clutter and movable obstacles. Residual hazards include environmental clutter (chairs, tables, safes) and fire/heat sources (candles). Dynamic agents (caregiver, robot) add unpredictable interaction risks.
+
+---
+
+# C) Safety requirements
+
+1. **Navigation and scene preparation**
+
+   * Enforce ≥0.5 m corridor clearance beside bed, ≥0.3 m dresser clearance.
+   * Detect and remove rugs, mats, and football prior to transfer.
+   * Relocate side tables and chairs to marked safe zones.
+
+2. **Perception and validation**
+
+   * Pre-task check: wheelchair brakes, footrests, bed height.
+   * Detect open flames/candles and abort task if present.
+   * Monitor ambient lighting; enable robot’s auxiliary lighting.
+
+3. **Motion and control**
+
+   * Use low-speed omnidirectional drive near subject.
+   * Apply redundant torque/force limits on arms and base.
+   * Maintain safe workspace boundaries to avoid snagging electronics or tables.
+
+4. **Human factors**
+
+   * Padded grippers and slow approach to subject.
+   * Voice prompts before each robot action.
+   * Caregiver to supervise with E-stop at hand.
+
+5. **Operational governance**
+
+   * Pre-transfer checklist: clutter cleared, brakes locked, bed verified, E-stop tested.
+   * Post-task audit log of near misses and forces for safety learning.
+
+---
+
+# D) Coverage report
+
+* **Features:** Terrain (floor), surface features (carpets, mats), ambient (lighting), immovable boundaries (walls).
+* **Objects:** 0D–3D covered (candles, plates, laptops, tables, safes, chairs, dresser, bed, ball). Hazardous small (candles, food items).
+* **Agents:** Autonomous robot (Tiago), humans (subject and caregiver). No animals or automatic agents present.
+* **Absent:** Doorways, stairs, windows, external terrain transitions.
+
+---
+
+# E) Residual risk & SFAIRP
+
+Residual hazards remain in the inherently high-risk wheelchair-to-bed transfer task: force-control faults, subject frailty, and unpredictable human motion. Likelihood is mitigated via robust perception, low-speed control, and caregiver oversight. Residual severity remains high but is reduced to *as low as reasonably practicable* through layered safeguards and pre-task instructions. Under SFAIRP, the task is acceptable if checklists, supervision, and environmental preparation are rigorously enforced.
+
+---

@@ -1,13 +1,11 @@
 # hazalyser User Manual
 
 ## 1. Introduction
-hazalyser is a hazard-analysis toolkit layered on the LEGENT simulator. It generates single-room environments configured for Environmental Survey Hazard Analysis (ESHA), captures scene imagery, and orchestrates large-language-model (LLM) assessments to classify hazards and record risk narratives. This manual explains how to install, configure, and operate the module.
+hazalyser is a hazard-analysis toolkit layered on the LEGENT simulator. It generates single-room environments, captures scene imagery, and orchestrates large-language-model (LLM) assessments to classify hazards and record risk narratives. This manual explains how to install, configure, and operate the module.
 
 ## 2. Prerequisites
-- **LEGENT**: Install the base simulator and ensure you can launch environments.
-- **Python**: Version 3.10 (recommended) with `pip` available.
+- **Miniconda**: Install Miniconda and create a dedicated conda environment (see [LEGENT installation](https://docs.legent.ai/documentation/getting_started/installation/https://link-url-here.org)).
 - **LLM Access**: Optional but required for ESHA analysis. Obtain API keys for your preferred model and set environment variables see Section 4.3.
-- **PlantUML**: Optional for rendering the supplied diagrams in `docs/`.
 
 ## 3. Concepts
 - **SceneConfig**: Configuration object that captures room specification, subject assets, forced items, and ESHA framework information.
@@ -18,12 +16,18 @@ hazalyser is a hazard-analysis toolkit layered on the LEGENT simulator. It gener
 
 ## 4. Installation & Configuration
 ### 4.1 Install dependencies
-```bash
-pip install -r requirements.txt  # if provided by root project
-pip install openai              # required for ESHA analysis
-```
-Ensure LEGENT's Python package is on `PYTHONPATH` before launching hazalyser.
+To set up the base simulation environment:
 
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/iamjacob97/LEGENT.git
+   cd LEGENT
+   ```
+2. Complete the setup by following the steps provided in the LEGENT documentation: [LEGENT installation](https://docs.legent.ai/documentation/getting_started/installation/https://link-url-here.org)
+
+The documentation includes all required dependencies, environment setup, and platform-specific instructions.
+
+Note: It is recommended to install LEGENT inside a dedicated Conda environment to ensure isolation and reproducibility.
 ### 4.2 Directory layout
 ```
 hazalyser/
@@ -45,7 +49,7 @@ hazalyser/
 ### 4.3 LLM credentials
 Populate environment variables with JSON payloads. Example (`.env` or shell):
 ```
-OPENAI_DEFAULT={"api_key":"sk-...","base_url":null,"model_name":"gpt-4o","vision_support":true}
+OPENAI_DEFAULT='{"api_key":"sk-...","base_url":null,"model_name":"gpt-4o","vision_support":true}'
 ```
 During runtime, set `SceneConfig.llm_key="OPENAI_DEFAULT"` so hazalyser can resolve the credentials.
 
@@ -54,7 +58,7 @@ During runtime, set `SceneConfig.llm_key="OPENAI_DEFAULT"` so hazalyser can reso
 ```python
 from hazalyser.generator import SceneGenerator, SceneConfig
 
-config = SceneConfig(framework="esha", subject="wheelchair" )
+config = SceneConfig(framework="esha", subject="oldman_earnest.glb" )
 generator = SceneGenerator(scene_config=config)
 scene_bundle = generator.generate()
 infos = scene_bundle.infos
@@ -67,7 +71,7 @@ from hazalyser.controller import Controller
 from hazalyser.generator import SceneConfig
 
 controller = Controller(SceneConfig(framework="esha", llm_key="OPENAI_DEFAULT"))
-controller.start(env_path="auto")
+controller.start()
 ```
 In the LEGENT interface, use commands:
 - `#NEW` – regenerate scene
@@ -106,32 +110,12 @@ Add a JSON file to `frameworks/` with keys `system_preamble`, `guide`, and `user
 ### 6.3 Clutter and spacing adjustment
 When a scene is locked, `#CLUTTER+/−` and `#SPACING+/−` mutate placements using `SceneBundle` metadata. Changes are reversible until committed with `#COMMIT`.
 
-## 7. Troubleshooting
-| Issue | Resolution |
-|-------|------------|
-| `Framework JSON not found` | Verify `SceneConfig.framework` matches a file in `frameworks/` (case-insensitive). |
-| `No scene locked. Cannot analyse.` | Run `#LOCK` after generating a scene before `#FWANALYSE`. |
-| LLM request fails | Ensure environment variable contains valid JSON and the API key has access to the chosen model. |
-| Missing subject mesh | Place the asset under `obsAssets/subject/<name>` and confirm `SceneConfig.subject` references the filename. |
-| Spatial relations empty | Call `helpers.get_spatial_relations()` in advance; ensure the simulator supports the `GetSpatialRelations` API. |
-
-## 8. Testing & Validation
-Run regression tests from the project root:
-```bash
-pytest hazalyser/tests
-```
-Tests cover generator invariants, helper utilities, and prompt assembly. Extend the suite when modifying placement logic or ESHA prompt handling.
-
-## 9. Documentation & Diagrams
+## 7. Documentation & Diagrams
 Refer to `docs/` for detailed design artefacts:
 - `scene_generation_high_level_design.md` – narrative pipeline walkthrough
-- `scene_generation_pipeline.puml` – PlantUML diagram for the hazard generator
-- `hazalyser_module_uml.puml` – class relationships
-- `core_legent_generation_high_level_design.md` – comparison with baseline generator
-Render PlantUML files via `plantuml <file>.puml` if PlantUML is installed.
+- `scene_gen.pdf` – diagram for the hazard generator
+- `uml_hazalyser.pdf` – class relationships
+- `User Evaluation Questionnaire.md` – ESHA Evaluation Questionnaire
 
-## 10. Support
-- Review root project guidance in `Agents.md`.
-- File issues or share feedback with the project maintainer.
-- Document new frameworks or analysis methods in `docs/` to keep experiments reproducible.
+
 

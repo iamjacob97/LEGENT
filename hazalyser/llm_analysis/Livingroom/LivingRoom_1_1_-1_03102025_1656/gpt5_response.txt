@@ -1,0 +1,80 @@
+# A) ESHA Worksheet
+
+| Item                              | Category                        | Location             | Interaction                         | Failure                                   | Consequence                               | Inherent                           | Safeguard                           | Instruction                        | Severity | Likelihood | Risk |
+| --------------------------------- | ------------------------------- | -------------------- | ----------------------------------- | ----------------------------------------- | ----------------------------------------- | ---------------------------------- | ----------------------------------- | ---------------------------------- | -------- | ---------- | ---- |
+| Floor (wood panels)               | Feature: terrain surface        | Entire room          | Robot and wheelchair traverse       | Slip, skid, uneven friction near rugs     | Loss of traction → collision or tip       | Rubber wheels, low-speed drive     | Slippage detection, automatic stop  | Ensure floor dry/clear before task | 4        | 2          | 8    |
+| Carpets/rugs                      | Feature: surface feature        | Near tables and sofa | Wheels catch or curl                | Abrupt stop, tip                          | Subject destabilisation, fall             | Compliant suspension               | Detect mats, reroute                | Remove/tape rugs before task       | 5        | 3          | 15   |
+| Walls and corners                 | Feature: immovable              | Room perimeter       | Robot navigates close               | Pose drift, collision                     | Robot rebounds into subject, blocked path | Bumpers, torque-limited base       | Lidar clearance inflation           | Keep ≥0.5 m clear near subject     | 3        | 2          | 6    |
+| Ambient lighting and lamps        | Feature: ambient                | Perimeter            | Light/glare affects camera depth    | Pose misestimation                        | Misplacement of object during handover    | Sensor fusion (lidar + vision)     | Task-light to compensate            | Maintain adequate ambient lighting | 3        | 2          | 6    |
+| Coffee table (medicines)          | Object: 3D immovable receptacle | Mid-room             | Robot retrieves packet              | Collision with clutter (glasses, bottles) | Drop medicine, spill liquids              | Force-limited arm, grasp templates | Vision + tactile grasp confirmation | Clear clutter before task          | 3        | 3          | 9    |
+| Wine bottles & glasses            | Object: fragile movable         | Bar surface          | Knocked during navigation/arm reach | Spill, breakage                           | Glass shards, slip hazard                 | Arm workspace limits               | Detect fragile items, avoid         | Relocate fragile items pre-task    | 4        | 2          | 8    |
+| Chairs and stools                 | Object: 3D movable              | Scattered            | Drift into path, occlusion          | Unexpected collision                      | Startle or obstacle delays                | Bumper stop                        | Pre-task reposition chairs          | Keep chairs at walls               | 2        | 3          | 6    |
+| Football                          | Object: 3D non-agent moving     | Near bar             | Ball rolls under wheels             | Base skid, tip                            | Subject startled, fall risk               | Low-speed base                     | Round-object detection              | Remove toys before task            | 4        | 3          | 12   |
+| Candles (lit/unlit)               | Object: 3D hazardous small      | Bed table, dresser   | Near flame during arm task          | Topple or ignite                          | Burns, fire hazard                        | Heat sensing                       | Abort if flame detected             | Extinguish candles before task     | 5        | 2          | 10   |
+| Electronics (laptops, TV, cables) | Object: 3D movable              | Tables, sofa, floor  | Occlude robot, snag cables          | Drag device or trip hazard                | Electrical hazard, equipment damage       | Workspace limiter                  | Cable detection, avoid zones        | Remove/secure electronics          | 3        | 2          | 6    |
+| Wardrobes & dresser               | Object: 3D immovable            | Walls                | Occlude navigation corridor         | Robot grazes edges                        | Redirected toward subject                 | Rounded base edges                 | Inflate clearance in map            | Keep 0.3 m dresser clearance       | 3        | 2          | 6    |
+| Subject (elderly in wheelchair)   | Agent: human subject            | Left-mid room        | Receives medicine handover          | Arm misplacement, collision               | Fall, fracture, skin tear                 | Padded compliant grippers          | Tactile sensing + voice cues        | Handover only at harness points    | 5        | 2          | 10   |
+| Caregiver/bystander               | Agent: human                    | At room perimeter    | Moves unexpectedly                  | Steps into robot path                     | Minor collision                           | Force-limits per ISO 15066         | Slow nav near humans                | Announce robot actions             | 3        | 2          | 6    |
+| Tiago robot                       | Agent: autonomous robot         | Mid-room             | Navigates, manipulates              | Control/force fault                       | Drop medicine, collide with subject       | Torque-limited base/arms           | Redundant watchdog, E-stop          | Caregiver standby with E-stop      | 5        | 2          | 10   |
+
+---
+
+# B) Summary and rationale
+
+The most critical risks are linked to **clutter and fragile objects (carpets, football, bottles, candles)** and **direct interaction with the frail subject**. Carpets pose the highest risk (15) due to wheelchair/robot tip-over potential. Dynamic rolling objects like the football (12) and fragile items (wine glasses, candles) introduce slip, fire, and burn hazards. The subject handover itself is inherently high risk (10) because of frailty and fall potential. Residual medium risks include navigation near walls, occluded electronics, and caregiver interference.
+
+---
+
+# C) Safety requirements
+
+1. **Environment preparation**
+
+   * Remove rugs, toys, candles, and fragile items pre-task.
+   * Push chairs and stools against walls.
+   * Secure or unplug electronics and cables.
+
+2. **Navigation and perception**
+
+   * Maintain ≥0.5 m clearance near subject and ≥0.3 m near furniture.
+   * Detect rolling objects (football) dynamically.
+   * Use task-lighting and lidar fusion in poor lighting.
+
+3. **Manipulation and handover**
+
+   * Restrict arm workspace to avoid fragile items.
+   * Grasp medicines only, using vision+tactile confirmation.
+   * Deliver at controlled speed with padded grippers.
+
+4. **Human factors**
+
+   * Provide audible cues before each robot motion.
+   * Caregiver supervision with manual E-stop is mandatory.
+   * Handover only to subject’s hands/lap harness points.
+
+5. **Operational governance**
+
+   * Pre-task checklist: clutter cleared, lighting adequate, candles extinguished, caregiver standby.
+   * Post-task logging of incidents for safety audits.
+
+---
+
+# D) Coverage report
+
+* **Features:** Terrain (floor), surface features (carpets), ambient (lighting), structural (walls).
+* **Objects:** 0D/fragile (candles, glass, bottles), 1D/2D (cables, rugs), 3D immovable (tables, wardrobes, sofa), 3D movable (chairs, stools), non-agent moving (football).
+* **Agents:** Autonomous robot (Tiago), humans (subject, caregiver).
+* **Absent:** No animals, stairs, or external thresholds.
+
+---
+
+# E) Residual risk & SFAIRP
+
+Residual hazards persist in:
+
+* Force-control failures during handover,
+* Unexpected caregiver or subject movement,
+* Unremoved clutter introducing slip/fire hazards.
+
+Severity remains high due to subject frailty, but likelihood is reduced through layered engineering safeguards, pre-task environmental preparation, and caregiver oversight. Residual risk is judged *as low as reasonably practicable* (SFAIRP) if checklists, supervision, and controlled robot behaviour are consistently enforced.
+
+---

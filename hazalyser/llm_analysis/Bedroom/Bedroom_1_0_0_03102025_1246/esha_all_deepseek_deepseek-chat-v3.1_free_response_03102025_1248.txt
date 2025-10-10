@@ -1,0 +1,57 @@
+=== LLM OUTPUT ===
+### A) ESHA Worksheet
+
+| Item | Category | Location | Interaction | Failure | Consequence | Inherent | Safeguard | Instruction | Severity | Likelihood | Risk |
+|------|----------|----------|-------------|---------|-------------|----------|-----------|-------------|----------|------------|------|
+| Walls (multiple instances) | Feature (Immovable 3D) | Perimeter of room | Collision during navigation | Sensor occlusion or path planning error | Damage to robot or wall; mission failure | Smooth, rigid surfaces | Obstacle avoidance algorithms; bumper sensors; reduced speed near walls | Keep clear path along walls | 2 | 2 | 4 |
+| Floors (multiple instances) | Feature (Surface/Terrain) | Entire room base | Traversal | Slippery surface or uneven transitions | Loss of traction; robot tip-over; mission failure | Flat, non-slip material | Traction control; slip detection; adaptive speed | Regular floor maintenance | 3 | 2 | 6 |
+| Bed (LowPolyInterior2_Bed4_C3) | Object (Immovable 3D Receptacle) | (11.91, 0.40, 8.82) | Close proximity for transfer task | Misalignment during subject transfer | Subject fall or injury; entrapment | Stable, fixed structure | Force/torque sensing on arms; precise positioning; verbal confirmation | Follow precise transfer protocols | 5 | 3 | 15 |
+| Wheelchair (subject's prefab) | Object (Movable 3D) | Near subject (9.26, 0.66, 0.91) | Interaction during transfer | Unintended movement or collision | Subject instability or fall; obstruction | Brakes engaged (assumed) | Detect wheelchair state; avoid contact during transfer | Secure wheelchair before transfer | 4 | 3 | 12 |
+| PC Table (LowPolyInterior2_PC_Table1_C3) | Object (Immovable 3D Receptacle) | (0.47, 0.37, 9.27) | Navigation around | Collision due to narrow clearance | Object or robot damage; mission delay | Solid structure | Path planning around obstacles; lidar monitoring | Keep area clear of clutter | 2 | 2 | 4 |
+| TV Table (LowPolyInterior2_TV_Table3_C2) | Object (Immovable 3D) | (0.73, 0.23, 0.33) | Navigation around | Collision; potential tip-over if contacted | Damage to table or robot; object fall | Low center of gravity | Avoidance algorithms; careful maneuvering | No high-speed moves nearby | 2 | 2 | 4 |
+| Plant (LowPolyInterior2_Plant_16) | Object (Movable 3D) | (6.28, 0.06, 9.78) | Accidental contact | Knocked over; spillage | Slippery floor hazard; damage to plant | Lightweight, tip-prone | Object recognition; keep safe distance | Place in stable location | 2 | 3 | 6 |
+| Chairs (multiple instances) | Object (Movable 3D) | Various locations | Navigation around; potential contact | Moved unintentionally; obstruction | Path blockage; trip hazard | Lightweight, movable | Push detection; re-plan paths if moved | Store chairs when not in use | 2 | 3 | 6 |
+| Small Table (LowPolyInterior2_SmallTable_02_C3) | Object (Immovable 3D Receptacle) | (12.09, 0.22, 6.47) | Navigation around | Collision; contact during tasks | Damage or object displacement | Solid, low profile | Lidar monitoring; avoid narrow passes | Keep surface clear | 2 | 2 | 4 |
+| Floor Lamp (LowPolyInterior_Lamp_01) | Object (Movable 3D) | (0.41, 0.79, 4.00) | Accidental contact | Knocked over; electrical hazard | Breakage; fire risk; injury | Tall, unstable | Careful navigation; no close approach | Secure base; avoid area during tasks | 3 | 2 | 6 |
+| Football (LowPolyInterior2_Football_01) | Object (Movable 0D) | (10.71, 0.14, 8.40) | Accidental contact | Rolled under robot or subject | Trip hazard; loss of traction | Round, rolls easily | Object detection; remove if in path | Store sports equipment safely | 2 | 3 | 6 |
+| Cabinets/Dresser (e.g., LowPolyInterior2_Dresser3_C1) | Object (Immovable 3D Receptacle) | Various locations | Navigation around | Collision; door contact | Damage; contents spilled | Solid, fixed | Path planning; avoid opening doors | Keep doors closed | 2 | 2 | 4 |
+| Carpets (e.g., LowPolyInterior_Catpet_05) | Feature (Surface/Terrain) | Various locations | Traversal | Slip or snag on edges | Loss of traction; tip-over | Low pile, secured edges | Traction control; edge detection | Secure carpets firmly | 3 | 2 | 6 |
+| Small Objects (e.g., Grape, Cheese, Book) | Object (Movable 0D/1D) | On surfaces | Accidental contact | Knocked off; floor hazard | Slippery surface; obstruction | Small, lightweight | High-resolution sensors; careful manipulation | Store small items securely | 2 | 3 | 6 |
+| Laptop (LowPolyInterior2_Laptop_01 on sofa) | Object (Movable 2D) | On sofa (0.82, 0.57, 4.99) | Accidental contact during task | Knocked off; damage | Data loss; breakage | Slidable on surface | Avoid sofa area during transfer | Remove laptop before task | 3 | 2 | 6 |
+| Kettle (LowPolyInterior2_Coffee_01) | Object (Movable 3D) | On cabinet (1.58, 1.00, 9.70) | Accidental contact | Spill; burn hazard | Subject or robot injury; slip | Hot liquid content | No interaction; keep clear | Store kettle securely | 4 | 2 | 8 |
+| Candles (LowPolyInterior_Candle_01) | Object (Movable 0D) | Various locations | Accidental contact | Knocked over; fire hazard | Burn injury; fire spread | Open flame (assumed) | Flame detection; avoid entirely | No candles in robot workspace | 4 | 2 | 8 |
+| Subject (Human Agent) | Agent (Human) | (9.26, 0.66, 0.91) | Physical assistance during transfer | Misjudged force or position | Fall; bruising; psychological harm | Frail, limited mobility | Force limits; slow movements; verbal cues | Subject cooperation required | 5 | 3 | 15 |
+| Agent (Tiago Robot) | Agent (Autonomous Robot) | (9.24, 0.03, 9.37) | Self-navigation and operation | System failure; software error | Unintended movements; collision | Complex system | Redundant sensors; emergency stop | Regular maintenance and testing | 4 | 2 | 8 |
+| Doorways (implied by wall gaps) | Feature (Ambient/Other) | Between wall segments | Navigation through | Misalignment; entrapment | Robot stuck; mission failure | Standard width | Precise path planning; size validation | Ensure clear passage | 3 | 2 | 6 |
+| Ambient Conditions (e.g., lighting) | Feature (Ambient) | Entire room | Sensor performance | Poor visibility; misdetection | Navigation errors; collisions | Variable lighting | Adaptive sensor fusion; redundancy | Maintain adequate lighting | 3 | 2 | 6 |
+
+### B) Summary and Rationale for Identified Risks
+
+High risks (Risk >= 12) are associated with direct physical interaction with the subject during transfer (Risk=15) and interaction with the wheelchair (Risk=12), due to the high severity of potential falls or injuries to the frail subject. Medium risks (Risk=6-8) involve environmental factors like slippery floors, tip-over hazards, and hot or fire-prone objects, where consequences include damage or injury but are mitigated by careful design and protocols. Low risks (Risk=4) are primarily navigation-related collisions with static furniture.
+
+### C) Safety Requirements
+
+1.  The robot must use force/torque sensing on manipulators with strict limits (<5N) during physical contact with the subject.
+2.  Obstacle avoidance must maintain a minimum clearance of 0.5m from the subject and wheelchair during navigation.
+3.  All paths must be validated for width >0.8m (robot footprint + margin) to prevent entrapment.
+4.  Traction control systems must engage on carpeted or potentially slippery surfaces, reducing speed by 50%.
+5.  Flammable objects (candles) or hot objects (kettle) must be detected and avoided with a no-approach zone of 1m.
+6.  Emergency stop must be triggerable by the subject or remotely, halting all actuators immediately.
+7.  Pre-task checks must ensure small objects are stowed and chairs are not in the primary path.
+
+### D) Coverage Report
+
+-   **Features**: Covered (walls, floors, doorways, ambient conditions).
+-   **Objects**: Covered (immovable: tables, bed; movable: chairs, small items; receptacles; non-agent moving: none in scene).
+-   **Agents**: Covered (human subject, autonomous robot). Animals and automatic agents absent.
+-   **Hazard Types**: Collisions (with walls, furniture), occlusion (sensors), tipping (on carpets, contact with lamp), entrapment (doorways), clutter (small objects), movable obstacles (chairs, football), dynamic agents (subject, robot), ambient changes (lighting). All foreseeable classes addressed.
+
+### E) Residual Risk & SFAIRP
+
+**Residual Risk**: After implementing mitigations, the highest residual risks remain in the physical transfer task (Risk reduced to ~6 through force sensing and protocols) and navigation near the subject (Risk reduced to ~4 through clearance rules). Overall, risks are reduced to As Low As Reasonably Practicable (ALARP) for an assistive care setting, given the necessity of the task and the state of robotics technology. Continuous monitoring and human supervision are required during high-risk interactions. The balance between risk and benefit (enabling transfer for a frail individual) is justified, with no further practicable mitigations identified without rendering the task non-viable.
+
+=== USAGE DETAILS ===
+Model: deepseek/deepseek-chat-v3.1:free
+Temperature: 0.2
+Max tokens: None
+Prompt tokens: 15468Completion tokens: 2320Total tokens: 17788

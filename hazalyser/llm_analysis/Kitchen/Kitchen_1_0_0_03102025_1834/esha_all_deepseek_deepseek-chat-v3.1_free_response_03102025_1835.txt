@@ -1,0 +1,44 @@
+=== LLM OUTPUT ===
+A) ESHA Worksheet Table:
+
+| Item | Category | Location | Interaction | Failure | Consequence | Inherent | Safeguard | Instruction | Severity | Likelihood | Risk |
+|------|----------|----------|-------------|---------|-------------|----------|-----------|-------------|----------|------------|------|
+| Walls | Feature (Immovable 3D) | Perimeter | Collision during navigation | Sensor failure/occlusion | Robot damage, subject injury from debris | Rigid structure | Obstacle avoidance system, bumper sensors | Maintain safe distance | 3 | 2 | 6 |
+| Floor surfaces | Feature (Surface) | Entire area | Traversal | Slippery surface detection failure | Robot slip/fall, dropped objects | Non-slip surface | Traction control, slip detection | Avoid wet areas | 2 | 2 | 4 |
+| Kitchen table (counter) | Object (Immovable 3D) | Multiple locations | Object retrieval | Misjudgment of reach/clearance | Collision, object spillage | Stable structure | Force limiting, proximity sensing | Approach carefully | 2 | 3 | 6 |
+| Refrigerator | Object (Immovable 3D) | (0.43, 0.90, 0.43) | Door interaction | Pinch point entanglement | Limb entrapment, injury | Door mechanism | Force sensing, safety stops | Monitor during operation | 3 | 2 | 6 |
+| Chairs/stools | Object (Movable 3D) | Multiple locations | Navigation around | Displacement/unexpected movement | Tripping hazard, obstruction | Lightweight | Object tracking, push detection | Secure chairs when possible | 2 | 3 | 6 |
+| Plants/vases | Object (Fragile 3D) | Multiple locations | Proximity | Contact during movement | Breakage, sharp debris | Brittle material | Increased clearance margins | Avoid close approaches | 2 | 2 | 4 |
+| Hob/stove | Object (Hazardous 3D) | (5.86, 0.02, 3.01) | Avoidance | Thermal/contact hazard | Burns, fire risk | Hot surface | Thermal sensing, keep-out zones | No interaction when active | 4 | 1 | 4 |
+| Oven | Object (Hazardous 3D) | (4.82, 0.46, 7.03) | Avoidance | Thermal/contact hazard | Severe burns | Hot surface | Thermal sensing, keep-out zones | No interaction when active | 4 | 1 | 4 |
+| Washing machine | Object (Moving 3D) | (3.56, 0.43, 0.36) | Avoidance during operation | Unexpected movement | Impact, entanglement | Vibration during use | Vibration detection, safe distance | Monitor operational status | 3 | 2 | 6 |
+| Trash bin | Object (Movable 3D) | (0.26, 0.20, 4.84) | Navigation around | Toppling, contents spill | Contamination hazard | Lightweight | Object stability assessment | Secure lid, avoid contact | 2 | 2 | 4 |
+| Food items (cup, pie, etc.) | Object (Fragile/Movable 3D) | Multiple surfaces | Manipulation | Dropping/spilling | Hot liquid burns, contamination | Fragile contents | Secure grip, spill prevention | Slow, careful handling | 3 | 3 | 9 |
+| Subject (human) | Agent (Autonomous) | (8.47, 0.66, 0.52) | Assistive interaction | Unexpected movement | Collision, injury | Frail, limited mobility | Continuous tracking, speed limits | Clear communication | 5 | 3 | 15 |
+| Doorways/openings | Feature (Aperture) | Between wall segments | Passage | Size miscalculation | Entrapment, structural damage | Fixed width | Dimensional verification | Center passage | 3 | 2 | 6 |
+| Ambient conditions | Feature (Ambient) | Entire area | General operation | Temperature/humidity changes | Sensor degradation | Environmental | Environmental monitoring | Regular calibration | 2 | 1 | 2 |
+| Clutter density | Feature (Clutter) | 0.646/m² | Navigation | Path blockage | Immobilization, task failure | High density | Path planning, clutter mapping | Prioritize clear paths | 2 | 3 | 6 |
+
+B) Summary and Rationale:
+Primary risks stem from human-robot interaction (Risk=15) due to subject's high frailty and mobility limitations. Food handling presents moderate risk (9) from potential hot liquid spills. All other hazards show controlled risks (2-9) through standard mitigations. The environment contains typical kitchen hazards (thermal, fragile objects) requiring specific avoidance protocols.
+
+C) Safety Requirements:
+1. Maintain minimum 1.5m distance from subject during movements
+2. Implement thermal sensing with 0.5m keep-out zones around hob/oven
+3. Force limits not exceeding 50N on all manipulator interactions
+4. Maximum speed 0.3m/s in subject proximity
+5. Liquid container handling must include spill-proof grips
+6. Continuous subject tracking with redundant sensors
+7. Emergency stop within 0.5s of collision detection
+
+D) Coverage Report:
+All ESHA categories addressed: Features (terrain: floors/walls, ambient), Objects (immovable: appliances, movable: chairs/food, fragile: glassware), Agents (human subject). No automatic agents or animals present. 100% coverage of scene elements achieved.
+
+E) Residual Risk & SFAIRP:
+Residual risk reduced to ALARP through implemented mitigations. Highest residual risk remains in human-robot interaction (Risk=6 after safeguards) due to subject's extreme vulnerability. All risks meet SFAIRP criteria through: 1) Inherent design (stable surfaces, clear pathways), 2) Engineering controls (sensors, force limits), 3) Administrative controls (speed limits, procedures), and 4) Emergency protocols (stops, alerts). No further practicable risk reduction identified.
+
+=== USAGE DETAILS ===
+Model: deepseek/deepseek-chat-v3.1:free
+Temperature: 0.2
+Max tokens: None
+Prompt tokens: 10831Completion tokens: 1305Total tokens: 12136

@@ -1,0 +1,41 @@
+=== LLM OUTPUT ===
+A) ESHA Worksheet
+
+| Item | Category | Location | Interaction | Failure | Consequence | Inherent | Safeguard | Instruction | Severity | Likelihood | Risk |
+|------|----------|----------|-------------|---------|-------------|----------|-----------|-------------|----------|------------|------|
+| Walls (multiple instances, e.g., prefab LowPolyInterior2_Wall3_C1_01) | Feature (immovable 2D/3D surface) | Perimeter of room (e.g., positions [0.0375,1.5,1.25] to [12.46,1.5,11.25]) | Robot navigation and arm extension; subject wheelchair movement | Collision during pathing or reaching | Robot damage; subject injury from impact (e.g., wheelchair tip) | Rounded edges on robot base | Lidar-based obstacle avoidance; speed limit <0.5 m/s near walls | Maintain >0.3m clearance; pause if subject approaches | 4 | 2 | 8 |
+| Floors (multiple instances, e.g., prefab LowPolyInterior2_Floor5_01) | Feature (immovable 2D terrain surface) | Room base (e.g., positions [1.25,-0.1,1.25] to [11.25,-0.1,11.25]) | Robot wheeling; subject wheelchair traversal | Slip/tip on uneven seams or debris | Robot stall; subject fall from wheelchair | Flat, non-slip robot treads | Sensor fusion for floor detection; anti-tip base design | Clear path before movement; verify flatness via lidar | 3 | 1 | 3 |
+| Carpet (prefab LowPolyInterior2_Carpet4_C2) | Feature (2D terrain surface, movable but static) | Central area ([8.66,0.005,7.61]) | Robot traversal; wheelchair rolling | Wheel entrapment or reduced traction | Mobility loss; delayed task; subject stranding | Omnidirectional wheels | Traction monitoring via encoders; path replanning | Avoid if possible; slow speed <0.2 m/s on carpet | 2 | 3 | 6 |
+| Ambient lighting (implied from lamps, e.g., LowPolyInterior2_Light_06) | Feature (ambient) | Scattered (e.g., [4.45,0.76,2.65]) | Sensor visibility for lidar/camera | Occlusion in low light | Mis-detection of obstacles/subject | IR-capable sensors | Adaptive lighting control; fallback to lidar | Ensure lamps on; calibrate in dim conditions | 2 | 2 | 4 |
+| Sofa (e.g., LowPolyInterior2_Sofa6_C1, LowPolyInterior2_Sofa1_C1) | Object (immovable 3D) | Near walls ([0.63,0.43,11.14]; [11.48,0.43,3.24]) | Navigation around; arm handover near subject | Collision or pinch during approach | Bruising to subject; arm jam | Soft upholstery | Proximity sensors on arms; stop on contact | Approach from front; announce intent verbally | 3 | 3 | 9 |
+| Coffee table (implied as kitchen_table, e.g., LowPolyInterior2_Table_01_C3 at [11.44,0.4,7.61]) | Object (immovable 3D receptacle) | Central ([11.44,0.4,7.61]) | Arm grasp of medicine packet; robot positioning | Tipping if bumped; occlusion of packet | Packet spill; subject denied meds; table fall on subject | Low center of gravity | Force/torque sensing in grippers; visual servoing | Scan table first; grasp gently (<5N force) | 4 | 4 | 16 |
+| Chairs (multiple, e.g., LowPolyInterior2_Chair_07_C2 at [10.86,0.45,7.61]) | Object (movable 3D) | Around tables ([10.86,0.45,7.61] etc.) | Navigation between; potential displacement | Tipping or blocking path | Tripped robot; subject wheelchair jam | Stable bases | Dynamic obstacle mapping via lidar | Push aside if needed, but verify stability | 3 | 3 | 9 |
+| Wardrobes/Dresser (e.g., LowPolyInterior2_Wardrobe7_C1 at [2.53,1.4,1.42]) | Object (immovable 3D) | Walls ([2.53,1.4,1.42]; [8.86,1.4,12.12]) | Arm reach if task extends; subject proximity | Door swing collision | Injury to frail subject; object entrapment | Fixed mounting | Joint limits on arms | Avoid unless task requires; monitor doors | 3 | 1 | 3 |
+| Small movable objects (e.g., football at [2.83,0.14,5.90]; food items like avocado/potato on table) | Object (movable 0D/3D, non-agent moving) | Scattered (floor/table, e.g., [11.45,0.83,7.55]) | Wheel rollout or arm sweep | Kicked into path; ingestion hazard if spilled | Clutter blockage; choking for subject if accessed | Lightweight | Object segmentation in perception | Clear small items pre-task; use grippers for retrieval | 2 | 4 | 8 |
+| Clutter (e.g., clothes, books, cups on surfaces/floor) | Object (movable 0D/3D) | Tables/floors (e.g., cup at [8.38,0.86,4.95]) | Arm manipulation; wheel traversal | Displacement causing trip | Fall risk to subject; robot tip | N/A | Clutter detection algorithm | Inventory and relocate non-task items | 3 | 4 | 12 |
+| TV/Fireplace (e.g., LowPolyInterior2_TV_04 at [11.48,0.83,0.33]; fireplace at [5.73,0.48,10.76]) | Object (immovable 3D) | Walls ([11.48,0.83,0.33]; [5.73,0.48,10.76]) | Navigation near; heat from fireplace | Electrical hazard or burn | Fire risk; subject scald | Heat-resistant materials | Thermal sensors; distance enforcement | Avoid fireplace area; no arm extension near TV | 4 | 2 | 8 |
+| Tiago robot (self) | Agent (autonomous robot) | Starting [10.96,0.03,6.23]; task path to table/subject | Self-navigation to table then subject | Sensor failure or path error | Collision with subject/objects | Redundant sensors | Emergency stop button; watchdog timer | Low-speed mode (0.3 m/s); verbal cues | 4 | 2 | 8 |
+| Subject (elderly woman in wheelchair, prefab person_in_a_wheelchair.glb) | Agent (human) | [1.26,0.66,5.62] | Handover of meds; proximity during retrieval | Mis-handover or bump | Injury/fall; med drop (denied care) | Frailty awareness in planning | Gentle grip force (<2N); vision confirmation | Approach slowly; confirm readiness verbally | 5 | 3 | 15 |
+| Player/Other agents (implied positions) | Agent (human/automatic, absent animals) | [10.46,0.03,12.10]; absent animals | Potential interference | Unpredictable movement | Collision distraction | N/A | Multi-agent tracking | Yield to humans; no animal handling | 3 | 1 | 3 |
+
+B) Summary and short rationale for identified risks  
+The scene is a cluttered living room (151 m², 0.64 clutter/m²) with immovable features (walls/floors), furniture (sofas/tables/chairs), and small movables (food/clothes). Key risks stem from the task: robot must navigate clutter to coffee table ([11.44,0.4,7.61]) for meds, then handover to frail wheelchair-bound subject ([1.26,0.66,5.62]) with poor vision. High risks (12-16) from table tipping (occlusion/clutter), subject collision (frailty), and handover failure (limited mobility). Rationale: Dense layout increases collision likelihood; subject's vulnerability amplifies severity; lidar range (5.6m) covers room but clutter may occlude.
+
+C) Safety requirements  
+1. Perception: Real-time 3D mapping with lidar/camera fusion to detect clutter/obstacles >0.95 accuracy.  
+2. Motion: Omnidirectional base limited to 0.3 m/s near subject/objects; arm torque <5N.  
+3. Interaction: Verbal/audio cues for subject awareness; force feedback for gentle handover.  
+4. Emergency: Auto-stop on contact or anomaly; remote override.  
+5. Task-specific: Pre-scan table for med packet; confirm subject position/vision aid.
+
+D) Coverage report  
+Features: Covered (terrain: floors/carpet; surfaces: walls; ambient: lighting; other: absent). Objects: Covered (0D: small items like football; 1D: absent; 2D: carpet; 3D: furniture/TV; immovable: walls/sofa; movable: chairs/clutter; non-agent moving: food/clothes). Agents: Covered (autonomous robots: Tiago; humans: subject; automatic: absent; animals: absent). All classes addressed; no stairs/doorways present.
+
+E) Residual risk & SFAIRP  
+Residual risks post-mitigations: Low (e.g., table interaction 16→4 via sensing; subject handover 15→3 via gentle protocols). Overall risk acceptable (max 4). SFAIRP: Mitigations (lidar limits, speed caps, verbal instructions) balance safety with task feasibility in cluttered indoor environment; further reductions (e.g., AI prediction) disproportionate to low likelihood.
+
+=== USAGE DETAILS ===
+Model: x-ai/grok-4-fast:free
+Temperature: 0.2
+Max tokens: None
+Prompt tokens: 19883Completion tokens: 2688Total tokens: 22571
